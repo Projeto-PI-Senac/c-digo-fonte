@@ -70,10 +70,14 @@ int main()
             al_draw_bitmap(background, 0, 0, 0);
 
             al_draw_filled_rectangle(x1, y1, x2, y2, al_map_rgb(0, 100, 255));
+            al_draw_filled_rectangle(x1, y1+120, x2, y2+120, al_map_rgb(0, 100, 255));
+            al_draw_filled_rectangle(x1, y1+240, x2, y2+240, al_map_rgb(0, 100, 255));
 
             int texto_x = x1 + (largura_botao / 2);
             int texto_y = y1 + (altura_botao / 2 - 25);
             al_draw_text(fonte, al_map_rgb(255, 255, 255), texto_x, texto_y, ALLEGRO_ALIGN_CENTER, "PLAY");
+            al_draw_text(fonte, al_map_rgb(255, 255, 255), texto_x, texto_y+120, ALLEGRO_ALIGN_CENTER, "TUTORIAL");
+            al_draw_text(fonte, al_map_rgb(255, 255, 255), texto_x, texto_y+240, ALLEGRO_ALIGN_CENTER, "SAIR");
         }
 
         if (evento.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN)
@@ -83,8 +87,21 @@ int main()
 
             if (mouse_x >= x1 && mouse_x <= x2 && mouse_y >= y1 && mouse_y <= y2)
             {
-                printf(">> VOCE CLICOU EM JOGAR! <<\n");
+                printf("JOGAR!\n");
             }
+            // botão jogar
+
+            if (mouse_x >= x1 && mouse_x <= x2 && mouse_y >= y1+120 && mouse_y <= y2+120)
+            {
+                printf("TUTORIAL!\n");
+            }
+            // botão tutorial
+
+            if (mouse_x >= x1 && mouse_x <= x2 && mouse_y >= y1+240 && mouse_y <= y2+240)
+            {
+                printf("SAIR!\n");
+            }
+            // botão sair
         }
 
         al_flip_display();
