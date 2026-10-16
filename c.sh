@@ -1,1 +1,1 @@
-gcc main.c -o jogo -lallegro -lallegro_main -lallegro_primitives -lallegro_audio -lallegro_image -lallegro_font -lallegro_ttf && ./jogo
+gcc main.c jogo.c -o jogo -I/usr/local/include -L/usr/local/lib -lallegro -lallegro_main -lallegro_primitives -lallegro_image -lallegro_font -lallegro_ttf -lallegro_audio -lallegro_acodec && ./jogo
