@@ -5,6 +5,7 @@
 #include <allegro5/allegro_font.h>       // sistema básico de fontes e texto
 #include <allegro5/allegro_ttf.h>        // carregar fontes personalizadas
 #include <allegro5/allegro_image.h>      // carregar imagens
+#include <math.h>
 
 #define LARGURA_TELA 800
 #define ALTURA_TELA 600
@@ -12,6 +13,16 @@
 #define COLUNAS_MAPA 30
 #define TAMANHO_PIXEL 40
 // Constantes
+
+typedef struct {
+
+    float x, y;
+    float origemX, origemY;
+    float velocidade;
+    int alerta;
+    float visao;
+} Inimigo;
+
 
 int jogo()
 {
@@ -62,11 +73,27 @@ int jogo()
     int coluna_da_porta = 10;
     mapa[linha_da_porta][coluna_da_porta] = 3;
 
+    mapa[10][20] = 0;
     bool jogando = true;
 
     bool chave_coletada = false;
     int linha_da_chave = 3;
     int coluna_da_chave = 3;
+
+    Inimigo guarda;
+    
+    int linhaInicial = 16;
+    int colunaInicial = 25;
+
+    guarda.origemX = colunaInicial * TAMANHO_PIXEL;
+    guarda.origemY = linhaInicial * TAMANHO_PIXEL;
+
+    guarda.x = guarda.origemX;
+    guarda.y = guarda.origemY;
+
+    guarda.velocidade = 2.0;
+    guarda.alerta = 0;
+    guarda.visao = 150.0;
 
     while (jogando)
     {
@@ -136,6 +163,7 @@ int jogo()
         if (cam_y > (LINHAS_MAPA * TAMANHO_PIXEL) - ALTURA_TELA)
             cam_y = (LINHAS_MAPA * TAMANHO_PIXEL) - ALTURA_TELA;
         // Redesenha o mapa conforme a posição
+     
 
         al_clear_to_color(al_map_rgb(0, 0, 0));
 
@@ -183,6 +211,31 @@ int jogo()
             player_x_tela + TAMANHO_PIXEL,
             player_y_tela + TAMANHO_PIXEL,
             al_map_rgb(255, 0, 0));
+
+        int inimigo_x_tela = guarda.x - cam_x;
+        int inimigo_y_tela = guarda.y - cam_y;
+        
+        al_draw_filled_rectangle(
+            inimigo_x_tela,
+            inimigo_y_tela,
+            inimigo_x_tela + TAMANHO_PIXEL,
+            inimigo_y_tela + TAMANHO_PIXEL,
+            al_map_rgb(0, 255, 0));
+
+        float dx = jogador_x_mundo - guarda.x;
+        float dy = jogador_y_mundo - guarda.y;
+
+        float distancia = sqrt(dx * dx + dy * dy);
+
+        if (distancia <= guarda.visao)
+        guarda.alerta = 1;
+
+        if(guarda.alerta == 1){
+            if (distancia > 1.0) {
+                guarda.x += (dx / distancia) * guarda.velocidade;
+                guarda.y += (dy / distancia) * guarda.velocidade;
+            }
+        }
 
         al_flip_display();
     } // Fim do while(jogando)
