@@ -1,7 +1,7 @@
 #include <stdio.h>                       // guia de linguagem C
 #include <stdbool.h>                     // adicionar o bool
 #include <allegro5/allegro.h>            // controla as janelas
-#include <allegro5/allegro_primitives.h> // formas geométricas báscias
+#include <allegro5/allegro_primitives.h> // formas geométricas básicas
 #include <allegro5/allegro_font.h>       // sistema básico de fontes e texto
 #include <allegro5/allegro_ttf.h>        // carregar fontes personalizadas
 #include <allegro5/allegro_image.h>      // carregar imagens
@@ -15,14 +15,12 @@
 // Constantes
 
 typedef struct {
-
     float x, y;
     float origemX, origemY;
     float velocidade;
-    int alerta;
+    int alerta; // 0 = Parado/Base, 1 = Perseguindo, 2 = Voltando para a origem
     float visao;
 } Inimigo;
-
 
 int jogo()
 {
@@ -39,6 +37,7 @@ int jogo()
 
     al_register_event_source(eventos, al_get_keyboard_event_source());
     al_register_event_source(eventos, al_get_display_event_source(janela));
+    
     int mapa[LINHAS_MAPA][COLUNAS_MAPA];
     int jogador_linha = 1;
     int jogador_coluna = 2;
@@ -48,7 +47,6 @@ int jogo()
     {
         for (int j = 0; j < COLUNAS_MAPA; j++)
         {
-        
             if (i == 0 || i == LINHAS_MAPA - 1 || j == 0 || j == COLUNAS_MAPA - 1)
             {
                 mapa[i][j] = 1;
@@ -57,7 +55,6 @@ int jogo()
             {
                 mapa[i][j] = 1;
             }
-
             else if ((j == 10 && i < 6) || (j == 20 && i > 6 && i < 13))
             {
                 mapa[i][j] = 1;
@@ -91,54 +88,57 @@ int jogo()
     guarda.x = guarda.origemX;
     guarda.y = guarda.origemY;
 
-    guarda.velocidade = 2.0;
+    guarda.velocidade = 1.5; 
     guarda.alerta = 0;
     guarda.visao = 150.0;
+
+    int contador_passo = 0;
+    int velocidade_passo = 15; 
 
     while (jogando)
     {
         ALLEGRO_EVENT event;
 
-        if (al_get_next_event(eventos, &event)) // Verifica a fila de eventos
+        while (al_get_next_event(eventos, &event))
         {
             if (event.type == ALLEGRO_EVENT_DISPLAY_CLOSE)
             {
                 jogando = false;
-            } // Clicar no X da aba para sair
+            }
 
             if (event.type == ALLEGRO_EVENT_KEY_DOWN)
             {
-                int linha = jogador_linha;
-                int coluna = jogador_coluna;
-                // Variáveis temporárias
-
-                switch (event.keyboard.keycode)
+                if (event.keyboard.keycode == ALLEGRO_KEY_ESCAPE)
                 {
-                case ALLEGRO_KEY_UP:
-                    linha--;
-                    break;
-                case ALLEGRO_KEY_DOWN:
-                    linha++;
-                    break;
-                case ALLEGRO_KEY_RIGHT:
-                    coluna++;
-                    break;
-                case ALLEGRO_KEY_LEFT:
-                    coluna--;
-                    break;
-                case ALLEGRO_KEY_ESCAPE:
                     jogando = false;
-                    break;
-                } // Movimentação do jogador
-
-                if (mapa[linha][coluna] != 1)
-                {
-                    jogador_linha = linha;
-                    jogador_coluna = coluna;
-                } // Verificar se há uma parede para então se mover
+                }
             }
         }
 
+        // Continuar andando ao segurar a telca
+        ALLEGRO_KEYBOARD_STATE key_state;
+        al_get_keyboard_state(&key_state);
+
+        contador_passo++;
+        if (contador_passo >= velocidade_passo)
+        {
+            int linha = jogador_linha;
+            int coluna = jogador_coluna;
+            bool moveu = false;
+
+            if (al_key_down(&key_state, ALLEGRO_KEY_UP)) { linha--; moveu = true; }
+            else if (al_key_down(&key_state, ALLEGRO_KEY_DOWN)) { linha++; moveu = true; }
+            else if (al_key_down(&key_state, ALLEGRO_KEY_LEFT)) { coluna--; moveu = true; }
+            else if (al_key_down(&key_state, ALLEGRO_KEY_RIGHT)) { coluna++; moveu = true; }
+
+            if (moveu && mapa[linha][coluna] != 1)
+            {
+                jogador_linha = linha;
+                jogador_coluna = coluna;
+                contador_passo = 0; 
+            }
+        }
+        // Se a chave for pega, a porta desaparece
         if (!chave_coletada && jogador_linha == linha_da_chave && jogador_coluna == coluna_da_chave)
         {
             chave_coletada = true;
@@ -148,11 +148,9 @@ int jogo()
 
         int jogador_x_mundo = jogador_coluna * TAMANHO_PIXEL;
         int jogador_y_mundo = jogador_linha * TAMANHO_PIXEL;
-        // Converte a posição da matriz para o MUNDO (em pixels)
 
         int cam_x = jogador_x_mundo - (LARGURA_TELA / 2);
         int cam_y = jogador_y_mundo - (ALTURA_TELA / 2);
-        // Câmera do jogador
 
         if (cam_x < 0)
             cam_x = 0;
@@ -162,8 +160,6 @@ int jogo()
             cam_x = (COLUNAS_MAPA * TAMANHO_PIXEL) - LARGURA_TELA;
         if (cam_y > (LINHAS_MAPA * TAMANHO_PIXEL) - ALTURA_TELA)
             cam_y = (LINHAS_MAPA * TAMANHO_PIXEL) - ALTURA_TELA;
-        // Redesenha o mapa conforme a posição
-     
 
         al_clear_to_color(al_map_rgb(0, 0, 0));
 
@@ -173,7 +169,6 @@ int jogo()
             {
                 int x = (j * TAMANHO_PIXEL) - cam_x;
                 int y = (i * TAMANHO_PIXEL) - cam_y;
-                // Converte a Matriz para a TELA do jogo
 
                 if (mapa[i][j] == 1)
                 {
@@ -181,7 +176,6 @@ int jogo()
                 }
                 else if (mapa[i][j] == 3)
                 {
-
                     al_draw_filled_rectangle(x, y, x + TAMANHO_PIXEL, y + TAMANHO_PIXEL, al_map_rgb(0, 120, 255));
                 }
                 else
@@ -191,7 +185,7 @@ int jogo()
                 }
             }
         }
-
+        // Enquanto a chave não for pega, ela é desenhada no mapa
         if (!chave_coletada)
         {
             int chave_x_mundo = coluna_da_chave * TAMANHO_PIXEL;
@@ -224,23 +218,97 @@ int jogo()
 
         float dx = jogador_x_mundo - guarda.x;
         float dy = jogador_y_mundo - guarda.y;
-
         float distancia = sqrt(dx * dx + dy * dy);
 
-        if (distancia <= guarda.visao)
-        guarda.alerta = 1;
+        // Se o guarda estiver parado, ele verifica se avistou o jogador
+        if (guarda.alerta == 0 && distancia <= guarda.visao) {
+            guarda.alerta = 1;
+        }
 
-        if(guarda.alerta == 1){
-            if (distancia > 1.0) {
-                guarda.x += (dx / distancia) * guarda.velocidade;
-                guarda.y += (dy / distancia) * guarda.velocidade;
+        // Se o jogador for pego, reinicia
+        if (guarda.alerta == 1 && distancia < 20.0f) {
+            printf("O guarda te alcançou! Recomeçando...\n");
+            
+            jogador_linha = 1;
+            jogador_coluna = 2;
+
+            guarda.x = guarda.origemX;
+            guarda.y = guarda.origemY;
+            guarda.alerta = 0;
+        }
+
+        // Estados do Guarda
+        if (guarda.alerta == 1) {
+            // ESTADO 1: Perseguindo o Jogador
+            float distancia_da_origem = sqrt(pow(guarda.x - guarda.origemX, 2) + pow(guarda.y - guarda.origemY, 2));
+            
+            // Se o jogador fugiu demais, o guarda desiste e começa a voltar 
+            if (distancia > 350.0 || distancia_da_origem > 400.0) {
+                guarda.alerta = 2; 
+                printf("O guarda perdeu você de vista e está voltando...\n");
+            }
+            else if (distancia > 1.0) {
+                // Eixo X
+                float novo_x = guarda.x + (dx / distancia) * guarda.velocidade;
+                int coluna_futura = (int)(novo_x + TAMANHO_PIXEL / 2) / TAMANHO_PIXEL;
+                int linha_atual = (int)(guarda.y + TAMANHO_PIXEL / 2) / TAMANHO_PIXEL;
+
+                if (mapa[linha_atual][coluna_futura] != 1) {
+                    guarda.x = novo_x;
+                }
+
+                // Eixo Y
+                float novo_y = guarda.y + (dy / distancia) * guarda.velocidade;
+                int coluna_atual = (int)(guarda.x + TAMANHO_PIXEL / 2) / TAMANHO_PIXEL;
+                int linha_futura = (int)(novo_y + TAMANHO_PIXEL / 2) / TAMANHO_PIXEL;
+
+                if (mapa[linha_futura][coluna_atual] != 1) {
+                    guarda.y = novo_y;
+                }
+            }
+        }
+        else if (guarda.alerta == 2) {
+            // ESTADO 2: VOLTANDO PARA A ORIGEM ANDANDO
+            
+            // Se ele te ver no caminho de volta, volta a perseguir!
+            if (distancia <= guarda.visao) {
+                guarda.alerta = 1;
+            } else {
+                float dx_origem = guarda.origemX - guarda.x;
+                float dy_origem = guarda.origemY - guarda.y;
+                float dist_origem = sqrt(dx_origem * dx_origem + dy_origem * dy_origem);
+
+                // Se chegou perto o suficiente da origem, reseta para o estado normal (0)
+                if (dist_origem <= 2.0) {
+                    guarda.x = guarda.origemX;
+                    guarda.y = guarda.origemY;
+                    guarda.alerta = 0;
+                } else {
+                    // Anda de volta com colisão nas paredes
+                    float velocidade_volta = guarda.velocidade * 0.8f; // Volta um pouquinho mais calmo
+
+                    float novo_x = guarda.x + (dx_origem / dist_origem) * velocidade_volta;
+                    int coluna_futura = (int)(novo_x + TAMANHO_PIXEL / 2) / TAMANHO_PIXEL;
+                    int linha_atual = (int)(guarda.y + TAMANHO_PIXEL / 2) / TAMANHO_PIXEL;
+
+                    if (mapa[linha_atual][coluna_futura] != 1) {
+                        guarda.x = novo_x;
+                    }
+
+                    float novo_y = guarda.y + (dy_origem / dist_origem) * velocidade_volta;
+                    int coluna_atual = (int)(guarda.x + TAMANHO_PIXEL / 2) / TAMANHO_PIXEL;
+                    int linha_futura = (int)(novo_y + TAMANHO_PIXEL / 2) / TAMANHO_PIXEL;
+
+                    if (mapa[linha_futura][coluna_atual] != 1) {
+                        guarda.y = novo_y;
+                    }
+                }
             }
         }
 
         al_flip_display();
     } // Fim do while(jogando)
 
-    // A limpeza da memória agora fica do lado de fora do loop, executada só quando o jogo realmente fecha
     al_destroy_event_queue(eventos);
     al_destroy_display(janela);
 
