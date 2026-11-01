@@ -1,11 +1,13 @@
 #include <stdio.h>                       // guia de linguagem C
+#include <stdbool.h>                     // para usar booleans
 #include <allegro5/allegro.h>            // controla as janelas
-#include <allegro5/allegro_primitives.h> // formas geométricas báscias
+#include <allegro5/allegro_primitives.h> // formas geométricas básicas
 #include <allegro5/allegro_font.h>       // sistema básico de fontes e texto
 #include <allegro5/allegro_ttf.h>        // carregar fontes personalizadas
 #include <allegro5/allegro_image.h>      // carregar imagens
 
-int jogo();
+// Declaração da função do jogo 
+bool jogo();
 
 int main()
 {
@@ -28,48 +30,104 @@ int main()
     int y2 = y1 + altura_botao;
     // posição do retangulo
 
+    // Ativa VSync para travar nos Hz do monitor e zerar o consumo ocioso de CPU
+    al_set_new_display_flags(ALLEGRO_WINDOWED | ALLEGRO_PROGRAMMABLE_PIPELINE);
+
     ALLEGRO_DISPLAY *janela = al_create_display(1280, 960);     // variavel da janela
     ALLEGRO_FONT *fonte = al_load_ttf_font("Arial.ttf", 50, 0); // variavel da fonte
     ALLEGRO_BITMAP *background = al_load_bitmap("fundo.png");   // varievel de imagem de fundo
     ALLEGRO_TIMER *timer = al_create_timer(1.0 / 60.0);         // variavel de contador de frame
 
-    ALLEGRO_EVENT_QUEUE *mouse = al_create_event_queue();
-    al_register_event_source(mouse, al_get_mouse_event_source());
-    al_register_event_source(mouse, al_get_display_event_source(janela));
-    al_register_event_source(mouse, al_get_timer_event_source(timer));
-    // eventos que envolvem o MOUSE
-
-    al_start_timer(timer);
-
-    bool jogando = true;
-    bool desenho = true;
-
+    // Validação de segurança para a fonte e para a imagem de fundo não crasharem o programa
     if (!fonte)
     {
-        printf("Erro ao carregar a fonte!\n");
+        printf("Erro crítico: Nao foi possivel carregar a fonte Arial.ttf!\n");
         return -1;
     }
 
-    while (jogando)
+    if (!background)
+    {
+        printf("Aviso: 'fundo.png' nao encontrado. O menu rodara com fundo preto.\n");
+    }
+
+    ALLEGRO_EVENT_QUEUE *event_queue = al_create_event_queue();
+    al_register_event_source(event_queue, al_get_mouse_event_source());
+    al_register_event_source(event_queue, al_get_display_event_source(janela));
+    al_register_event_source(event_queue, al_get_timer_event_source(timer));
+    // eventos que envolvem o MOUSE e display
+
+    al_start_timer(timer);
+
+    bool rodando_programa = true;
+    bool redesenhar = true;
+
+    while (rodando_programa)
     {
         ALLEGRO_EVENT evento;
-        al_wait_for_event(mouse, &evento);
+        al_wait_for_event(event_queue, &evento);
 
         if (evento.type == ALLEGRO_EVENT_DISPLAY_CLOSE)
         {
-            jogando = false;
+            rodando_programa = false;
+        }
+        else if (evento.type == ALLEGRO_EVENT_TIMER)
+        {
+            redesenhar = true;
+        }
+        else if (evento.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN)
+        {
+            int mouse_x = evento.mouse.x;
+            int mouse_y = evento.mouse.y;
+
+            // BOTÃO PLAY
+            if (mouse_x >= x1 && mouse_x <= x2 && mouse_y >= y1 && mouse_y <= y2)
+            {
+                al_destroy_font(fonte);
+                if (background) al_destroy_bitmap(background);
+                al_destroy_display(janela);
+                al_destroy_event_queue(event_queue);
+                al_destroy_timer(timer);
+
+                jogo();
+
+                janela = al_create_display(1280, 960);
+                fonte = al_load_ttf_font("Arial.ttf", 50, 0);
+                background = al_load_bitmap("fundo.png");
+                timer = al_create_timer(1.0 / 60.0);
+
+                event_queue = al_create_event_queue();
+                al_register_event_source(event_queue, al_get_mouse_event_source());
+                al_register_event_source(event_queue, al_get_display_event_source(janela));
+                al_register_event_source(event_queue, al_get_timer_event_source(timer));
+                al_start_timer(timer);
+            }
+
+            // BOTÃO TUTORIAL
+            if (mouse_x >= x1 && mouse_x <= x2 && mouse_y >= y1 + 120 && mouse_y <= y2 + 120)
+            {
+                printf("TUTORIAL CLICADO!\n");
+            }
+
+            // BOTÃO SAIR
+            if (mouse_x >= x1 && mouse_x <= x2 && mouse_y >= y1 + 240 && mouse_y <= y2 + 240)
+            {
+                rodando_programa = false;
+            }
         }
 
-        if (evento.type == ALLEGRO_EVENT_TIMER)
+        // Renderização controlada para economizar CPU
+        if (redesenhar && al_is_event_queue_empty(event_queue))
         {
-            desenho = true;
-        }
+            redesenhar = false;
 
-        if (desenho && al_is_event_queue_empty(mouse))
-        {
-            desenho = false;
-
-            al_draw_bitmap(background, 0, 0, 0);
+            if (background)
+            {
+                al_draw_bitmap(background, 0, 0, 0);
+            }
+            else
+            {
+                al_clear_to_color(al_map_rgb(0, 0, 0));
+            }
 
             al_draw_filled_rectangle(x1, y1, x2, y2, al_map_rgb(0, 100, 255));
             al_draw_filled_rectangle(x1, y1 + 120, x2, y2 + 120, al_map_rgb(0, 100, 255));
@@ -80,47 +138,17 @@ int main()
             al_draw_text(fonte, al_map_rgb(255, 255, 255), texto_x, texto_y, ALLEGRO_ALIGN_CENTER, "PLAY");
             al_draw_text(fonte, al_map_rgb(255, 255, 255), texto_x, texto_y + 120, ALLEGRO_ALIGN_CENTER, "TUTORIAL");
             al_draw_text(fonte, al_map_rgb(255, 255, 255), texto_x, texto_y + 240, ALLEGRO_ALIGN_CENTER, "SAIR");
+
+            al_flip_display();
         }
-
-        if (evento.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN)
-        {
-            int mouse_x = evento.mouse.x;
-            int mouse_y = evento.mouse.y;
-
-            if (mouse_x >= x1 && mouse_x <= x2 && mouse_y >= y1 && mouse_y <= y2)
-            {
-                al_destroy_font(fonte);
-                al_destroy_bitmap(background);
-                al_destroy_display(janela);
-                al_destroy_event_queue(mouse);
-
-               jogo();
-
-                return 0;
-            }
-            // botão jogar
-
-            if (mouse_x >= x1 && mouse_x <= x2 && mouse_y >= y1 + 120 && mouse_y <= y2 + 120)
-            {
-                printf("TUTORIAL!\n");
-            }
-            // botão tutorial
-
-            if (mouse_x >= x1 && mouse_x <= x2 && mouse_y >= y1 + 240 && mouse_y <= y2 + 240)
-            {
-                printf("SAIR!\n");
-            }
-            // botão sair
-        }
-
-        al_flip_display();
-        // mostrar na tela :D
     }
 
+   // limpeza na memória
     al_destroy_font(fonte);
+    if (background) al_destroy_bitmap(background);
     al_destroy_display(janela);
-    al_destroy_bitmap(background);
-    // limpar armazenamento
+    al_destroy_event_queue(event_queue);
+    al_destroy_timer(timer);
 
     return 0;
 }

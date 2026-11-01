@@ -1,5 +1,6 @@
 #include <stdio.h>                       // guia de linguagem C
 #include <stdbool.h>                     // adicionar o bool
+#include <string.h>                      // manipulação de strings (strlen, strcpy)
 #include <allegro5/allegro.h>            // controla as janelas
 #include <allegro5/allegro_primitives.h> // formas geométricas básicas
 #include <allegro5/allegro_font.h>       // sistema básico de fontes e texto
@@ -14,13 +15,21 @@
 #define TAMANHO_PIXEL 40
 // Constantes
 
-typedef struct {
+typedef struct
+{
     float x, y;
     float origemX, origemY;
     float velocidade;
     int alerta; // 0 = Parado/Base, 1 = Perseguindo, 2 = Voltando para a origem
     float visao;
 } Inimigo;
+
+typedef struct
+{
+    float x, y;
+    bool ativo;
+    char texto[150];
+} NPC;
 
 int jogo()
 {
@@ -37,7 +46,7 @@ int jogo()
 
     al_register_event_source(eventos, al_get_keyboard_event_source());
     al_register_event_source(eventos, al_get_display_event_source(janela));
-    
+
     int mapa[LINHAS_MAPA][COLUNAS_MAPA];
     int jogador_linha = 1;
     int jogador_coluna = 2;
@@ -78,7 +87,7 @@ int jogo()
     int coluna_da_chave = 3;
 
     Inimigo guarda;
-    
+
     int linhaInicial = 16;
     int colunaInicial = 25;
 
@@ -88,12 +97,18 @@ int jogo()
     guarda.x = guarda.origemX;
     guarda.y = guarda.origemY;
 
-    guarda.velocidade = 1.5; 
+    guarda.velocidade = 1.5;
     guarda.alerta = 0;
     guarda.visao = 150.0;
 
+    NPC mentor;
+    mentor.x = 5 * TAMANHO_PIXEL;
+    mentor.y = 5 * TAMANHO_PIXEL;
+    mentor.ativo = false;
+    strcpy(mentor.texto, "Ola, aluno! Colete a chave para abrir a porta e escapar do guarda!");
+
     int contador_passo = 0;
-    int velocidade_passo = 15; 
+    int velocidade_passo = 15;
 
     while (jogando)
     {
@@ -115,7 +130,7 @@ int jogo()
             }
         }
 
-        // Continuar andando ao segurar a telca
+        // Continuar andando ao segurar a tecla
         ALLEGRO_KEYBOARD_STATE key_state;
         al_get_keyboard_state(&key_state);
 
@@ -126,23 +141,40 @@ int jogo()
             int coluna = jogador_coluna;
             bool moveu = false;
 
-            if (al_key_down(&key_state, ALLEGRO_KEY_UP)) { linha--; moveu = true; }
-            else if (al_key_down(&key_state, ALLEGRO_KEY_DOWN)) { linha++; moveu = true; }
-            else if (al_key_down(&key_state, ALLEGRO_KEY_LEFT)) { coluna--; moveu = true; }
-            else if (al_key_down(&key_state, ALLEGRO_KEY_RIGHT)) { coluna++; moveu = true; }
+            if (al_key_down(&key_state, ALLEGRO_KEY_UP))
+            {
+                linha--;
+                moveu = true;
+            }
+            else if (al_key_down(&key_state, ALLEGRO_KEY_DOWN))
+            {
+                linha++;
+                moveu = true;
+            }
+            else if (al_key_down(&key_state, ALLEGRO_KEY_LEFT))
+            {
+                coluna--;
+                moveu = true;
+            }
+            else if (al_key_down(&key_state, ALLEGRO_KEY_RIGHT))
+            {
+                coluna++;
+                moveu = true;
+            }
 
             if (moveu && mapa[linha][coluna] != 1)
             {
                 jogador_linha = linha;
                 jogador_coluna = coluna;
-                contador_passo = 0; 
+                contador_passo = 0;
             }
         }
+        
         // Se a chave for pega, a porta desaparece
         if (!chave_coletada && jogador_linha == linha_da_chave && jogador_coluna == coluna_da_chave)
         {
             chave_coletada = true;
-            mapa[linha_da_porta][coluna_da_porta] = 0; 
+            mapa[linha_da_porta][coluna_da_porta] = 0;
             printf("Chave coletada e porta aberta!\n");
         }
 
@@ -160,6 +192,17 @@ int jogo()
             cam_x = (COLUNAS_MAPA * TAMANHO_PIXEL) - LARGURA_TELA;
         if (cam_y > (LINHAS_MAPA * TAMANHO_PIXEL) - ALTURA_TELA)
             cam_y = (LINHAS_MAPA * TAMANHO_PIXEL) - ALTURA_TELA;
+
+        float dist_npc = sqrt(pow(jogador_x_mundo - mentor.x, 2) + pow(jogador_y_mundo - mentor.y, 2));
+
+        if (dist_npc < 40.0)
+        {
+            mentor.ativo = true; // Aproximou, ativa a fala
+        }
+        else
+        {
+            mentor.ativo = false; // Afastou, fecha a caixa
+        }
 
         al_clear_to_color(al_map_rgb(0, 0, 0));
 
@@ -185,6 +228,7 @@ int jogo()
                 }
             }
         }
+
         // Enquanto a chave não for pega, ela é desenhada no mapa
         if (!chave_coletada)
         {
@@ -208,7 +252,7 @@ int jogo()
 
         int inimigo_x_tela = guarda.x - cam_x;
         int inimigo_y_tela = guarda.y - cam_y;
-        
+
         al_draw_filled_rectangle(
             inimigo_x_tela,
             inimigo_y_tela,
@@ -216,19 +260,83 @@ int jogo()
             inimigo_y_tela + TAMANHO_PIXEL,
             al_map_rgb(0, 255, 0));
 
+        int npc_x_tela = mentor.x - cam_x;
+        int npc_y_tela = mentor.y - cam_y;
+        al_draw_filled_rectangle(npc_x_tela, npc_y_tela, npc_x_tela + TAMANHO_PIXEL, npc_y_tela + TAMANHO_PIXEL, al_map_rgb(255, 0, 255));
+
+        // Se o NPC estiver ativo, desenha a caixa de diálogo com quebra de linha automática por palavras
+        if (mentor.ativo)
+        {
+            al_draw_filled_rectangle(50, ALTURA_TELA - 130, LARGURA_TELA - 50, ALTURA_TELA - 20, al_map_rgb(20, 20, 20));
+            al_draw_rectangle(50, ALTURA_TELA - 130, LARGURA_TELA - 50, ALTURA_TELA - 20, al_map_rgb(255, 255, 255), 2.0);
+
+            ALLEGRO_TRANSFORM transformacao;
+            al_identity_transform(&transformacao);
+            al_scale_transform(&transformacao, 2.0, 2.0);
+            al_use_transform(&transformacao);
+
+            ALLEGRO_FONT *fonte = al_create_builtin_font();
+            float inicio_x = 32.0;
+            float inicio_y = (ALTURA_TELA - 115) / 2.0;
+            float largura_maxima = 330.0; 
+
+            char linha_atual[100] = "";
+            char palavra[50];
+            int p = 0;
+            int y_offset = 0;
+
+            for (int i = 0; i <= strlen(mentor.texto); i++)
+            {
+                if (mentor.texto[i] == ' ' || mentor.texto[i] == '\0')
+                {
+                    palavra[p] = '\0';
+                    p = 0;
+
+                    char teste[150];
+                    strcpy(teste, linha_atual);
+                    if (strlen(linha_atual) > 0) strcat(teste, " ");
+                    strcat(teste, palavra);
+
+                    if (al_get_text_width(fonte, teste) > largura_maxima)
+                    {
+                        al_draw_text(fonte, al_map_rgb(255, 255, 255), inicio_x, inicio_y + y_offset, 0, linha_atual);
+                        y_offset += 12;
+                        strcpy(linha_atual, palavra);
+                    }
+                    else
+                    {
+                        strcpy(linha_atual, teste);
+                    }
+                }
+                else
+                {
+                    if (p < 49) palavra[p++] = mentor.texto[i];
+                }
+            }
+            if (strlen(linha_atual) > 0)
+            {
+                al_draw_text(fonte, al_map_rgb(255, 255, 255), inicio_x, inicio_y + y_offset, 0, linha_atual);
+            }
+
+            al_identity_transform(&transformacao);
+            al_use_transform(&transformacao);
+        }
+
         float dx = jogador_x_mundo - guarda.x;
         float dy = jogador_y_mundo - guarda.y;
         float distancia = sqrt(dx * dx + dy * dy);
 
         // Se o guarda estiver parado, ele verifica se avistou o jogador
-        if (guarda.alerta == 0 && distancia <= guarda.visao) {
+        if (guarda.alerta == 0 && distancia <= guarda.visao)
+        {
             guarda.alerta = 1;
         }
 
         // Se o jogador for pego, reinicia
-        if (guarda.alerta == 1 && distancia < 20.0f) {
+        if (guarda.alerta == 1 && distancia < 20.0f)
+        {
             printf("O guarda te alcançou! Recomeçando...\n");
-            
+
             jogador_linha = 1;
             jogador_coluna = 2;
 
@@ -238,22 +346,26 @@ int jogo()
         }
 
         // Estados do Guarda
-        if (guarda.alerta == 1) {
+        if (guarda.alerta == 1)
+        {
             // ESTADO 1: Perseguindo o Jogador
             float distancia_da_origem = sqrt(pow(guarda.x - guarda.origemX, 2) + pow(guarda.y - guarda.origemY, 2));
-            
-            // Se o jogador fugiu demais, o guarda desiste e começa a voltar 
-            if (distancia > 350.0 || distancia_da_origem > 400.0) {
-                guarda.alerta = 2; 
+
+            // Se o jogador fugiu demais, o guarda desiste e começa a voltar
+            if (distancia > 350.0 || distancia_da_origem > 400.0)
+            {
+                guarda.alerta = 2;
                 printf("O guarda perdeu você de vista e está voltando...\n");
             }
-            else if (distancia > 1.0) {
+            else if (distancia > 1.0)
+            {
                 // Eixo X
                 float novo_x = guarda.x + (dx / distancia) * guarda.velocidade;
                 int coluna_futura = (int)(novo_x + TAMANHO_PIXEL / 2) / TAMANHO_PIXEL;
                 int linha_atual = (int)(guarda.y + TAMANHO_PIXEL / 2) / TAMANHO_PIXEL;
 
-                if (mapa[linha_atual][coluna_futura] != 1) {
+                if (mapa[linha_atual][coluna_futura] != 1)
+                {
                     guarda.x = novo_x;
                 }
 
@@ -262,36 +374,45 @@ int jogo()
                 int coluna_atual = (int)(guarda.x + TAMANHO_PIXEL / 2) / TAMANHO_PIXEL;
                 int linha_futura = (int)(novo_y + TAMANHO_PIXEL / 2) / TAMANHO_PIXEL;
 
-                if (mapa[linha_futura][coluna_atual] != 1) {
+                if (mapa[linha_futura][coluna_atual] != 1)
+                {
                     guarda.y = novo_y;
                 }
             }
         }
-        else if (guarda.alerta == 2) {
+        else if (guarda.alerta == 2)
+        {
             // ESTADO 2: VOLTANDO PARA A ORIGEM ANDANDO
-            
+
             // Se ele te ver no caminho de volta, volta a perseguir!
-            if (distancia <= guarda.visao) {
+            if (distancia <= guarda.visao)
+            {
                 guarda.alerta = 1;
-            } else {
+            }
+            else
+            {
                 float dx_origem = guarda.origemX - guarda.x;
                 float dy_origem = guarda.origemY - guarda.y;
                 float dist_origem = sqrt(dx_origem * dx_origem + dy_origem * dy_origem);
 
-                // Se chegou perto o suficiente da origem, reseta para o estado normal (0)
-                if (dist_origem <= 2.0) {
+                // Se chegou perto o suficiente da origem, reseta para o estado normal
+                if (dist_origem <= 2.0)
+                {
                     guarda.x = guarda.origemX;
                     guarda.y = guarda.origemY;
                     guarda.alerta = 0;
-                } else {
+                }
+                else
+                {
                     // Anda de volta com colisão nas paredes
-                    float velocidade_volta = guarda.velocidade * 0.8f; // Volta um pouquinho mais calmo
+                    float velocidade_volta = guarda.velocidade * 0.8f;
 
                     float novo_x = guarda.x + (dx_origem / dist_origem) * velocidade_volta;
                     int coluna_futura = (int)(novo_x + TAMANHO_PIXEL / 2) / TAMANHO_PIXEL;
                     int linha_atual = (int)(guarda.y + TAMANHO_PIXEL / 2) / TAMANHO_PIXEL;
 
-                    if (mapa[linha_atual][coluna_futura] != 1) {
+                    if (mapa[linha_atual][coluna_futura] != 1)
+                    {
                         guarda.x = novo_x;
                     }
 
@@ -299,7 +420,8 @@ int jogo()
                     int coluna_atual = (int)(guarda.x + TAMANHO_PIXEL / 2) / TAMANHO_PIXEL;
                     int linha_futura = (int)(novo_y + TAMANHO_PIXEL / 2) / TAMANHO_PIXEL;
 
-                    if (mapa[linha_futura][coluna_atual] != 1) {
+                    if (mapa[linha_futura][coluna_atual] != 1)
+                    {
                         guarda.y = novo_y;
                     }
                 }
@@ -311,6 +433,5 @@ int jogo()
 
     al_destroy_event_queue(eventos);
     al_destroy_display(janela);
-
     return 0;
 }
