@@ -20,8 +20,9 @@ typedef struct
     float x, y;
     float origemX, origemY;
     float velocidade;
-    int alerta; // 0 = Parado/Base, 1 = Perseguindo, 2 = Voltando para a origem
+    int alerta;          // 0 = Normal/Parado, 1 = Desconfiado/Segunda Checagem, 2 = Perseguindo, 3 = Voltando
     float visao;
+    int tempo_suspeito;  // Contador para o tempo de hesitação da segunda checagem
 } Inimigo;
 
 typedef struct
@@ -100,6 +101,7 @@ int jogo()
     guarda.velocidade = 1.5;
     guarda.alerta = 0;
     guarda.visao = 150.0;
+    guarda.tempo_suspeito = 0;
 
     NPC mentor;
     mentor.x = 5 * TAMANHO_PIXEL;
@@ -197,11 +199,11 @@ int jogo()
 
         if (dist_npc < 40.0)
         {
-            mentor.ativo = true; // Aproximou, ativa a fala
+            mentor.ativo = true;
         }
         else
         {
-            mentor.ativo = false; // Afastou, fecha a caixa
+            mentor.ativo = false;
         }
 
         al_clear_to_color(al_map_rgb(0, 0, 0));
@@ -229,7 +231,6 @@ int jogo()
             }
         }
 
-        // Enquanto a chave não for pega, ela é desenhada no mapa
         if (!chave_coletada)
         {
             int chave_x_mundo = coluna_da_chave * TAMANHO_PIXEL;
@@ -253,6 +254,7 @@ int jogo()
         int inimigo_x_tela = guarda.x - cam_x;
         int inimigo_y_tela = guarda.y - cam_y;
 
+        // Corpo do guarda
         al_draw_filled_rectangle(
             inimigo_x_tela,
             inimigo_y_tela,
@@ -260,11 +262,23 @@ int jogo()
             inimigo_y_tela + TAMANHO_PIXEL,
             al_map_rgb(0, 255, 0));
 
+        // ponto de exclamação encima do guarda
+        if (guarda.alerta == 1)
+        {
+            float centro_x = inimigo_x_tela + (TAMANHO_PIXEL / 2.0f);
+            float topo_y = inimigo_y_tela - 32.0f; // Mais alta ainda em cima da cabeça
+
+            // Corpo largo e alto da exclamação
+            al_draw_filled_rectangle(centro_x - 4, topo_y, centro_x + 4, topo_y + 22, al_map_rgb(255, 255, 0));
+            // Ponto grande da exclamação embaixo
+            al_draw_filled_rectangle(centro_x - 4, topo_y + 26, centro_x + 4, topo_y + 34, al_map_rgb(255, 255, 0));
+        }
+
         int npc_x_tela = mentor.x - cam_x;
         int npc_y_tela = mentor.y - cam_y;
         al_draw_filled_rectangle(npc_x_tela, npc_y_tela, npc_x_tela + TAMANHO_PIXEL, npc_y_tela + TAMANHO_PIXEL, al_map_rgb(255, 0, 255));
 
-        // Se o NPC estiver ativo, desenha a caixa de diálogo com quebra de linha automática por palavras
+        // Se o NPC estiver ativo, desenha a caixa de diálogo
         if (mentor.ativo)
         {
             al_draw_filled_rectangle(50, ALTURA_TELA - 130, LARGURA_TELA - 50, ALTURA_TELA - 20, al_map_rgb(20, 20, 20));
@@ -326,14 +340,38 @@ int jogo()
         float dy = jogador_y_mundo - guarda.y;
         float distancia = sqrt(dx * dx + dy * dy);
 
-        // Se o guarda estiver parado, ele verifica se avistou o jogador
+        // LÓGICA DA SEGUNDA CHANCE E DA CHECAGEM:
         if (guarda.alerta == 0 && distancia <= guarda.visao)
         {
+            // O guarda desconfiou pela primeira vez
             guarda.alerta = 1;
+            guarda.tempo_suspeito = 0; 
+            printf("O guarda desconfiou de algo...\n");
+        }
+        else if (guarda.alerta == 1)
+        {
+            // SEGUNDA CHANCE: Se o jogador fugir do campo de visão durante a desconfiança, o guarda desiste!
+            if (distancia > guarda.visao)
+            {
+                guarda.alerta = 0;
+                guarda.tempo_suspeito = 0;
+                printf("Ufa! O guarda perdeu você de vista a tempo e voltou ao normal.\n");
+            }
+            else
+            {
+                // Se continuar na mira, o contador avança
+                guarda.tempo_suspeito++;
+                // 80 frames de janela de escape (o dobro do anterior, dando bastante tempo para reagir)
+                if (guarda.tempo_suspeito > 80) 
+                {
+                    guarda.alerta = 2; // Acabou a chance: vira perseguição real!
+                    printf("O guarda te pegou no flagra e começou a correr!\n");
+                }
+            }
         }
 
-        // Se o jogador for pego, reinicia
-        if (guarda.alerta == 1 && distancia < 20.0f)
+        // Se o jogador for pego na perseguição real, reinicia
+        if (guarda.alerta == 2 && distancia < 20.0f)
         {
             printf("O guarda te alcançou! Recomeçando...\n");
 
@@ -343,18 +381,19 @@ int jogo()
             guarda.x = guarda.origemX;
             guarda.y = guarda.origemY;
             guarda.alerta = 0;
+            guarda.tempo_suspeito = 0;
         }
 
         // Estados do Guarda
-        if (guarda.alerta == 1)
+        if (guarda.alerta == 2)
         {
-            // ESTADO 1: Perseguindo o Jogador
+            // ESTADO 2: Perseguindo o Jogador
             float distancia_da_origem = sqrt(pow(guarda.x - guarda.origemX, 2) + pow(guarda.y - guarda.origemY, 2));
 
-            // Se o jogador fugiu demais, o guarda desiste e começa a voltar
+            // Se o jogador fugiu da perseguição real, o guarda desiste e volta (Estado 3)
             if (distancia > 350.0 || distancia_da_origem > 400.0)
             {
-                guarda.alerta = 2;
+                guarda.alerta = 3;
                 printf("O guarda perdeu você de vista e está voltando...\n");
             }
             else if (distancia > 1.0)
@@ -380,14 +419,15 @@ int jogo()
                 }
             }
         }
-        else if (guarda.alerta == 2)
+        else if (guarda.alerta == 3)
         {
-            // ESTADO 2: VOLTANDO PARA A ORIGEM ANDANDO
+            // ESTADO 3: VOLTANDO PARA A ORIGEM ANDANDO
 
-            // Se ele te ver no caminho de volta, volta a perseguir!
+            // Se ele te ver no caminho de volta, entra em alerta de novo
             if (distancia <= guarda.visao)
             {
                 guarda.alerta = 1;
+                guarda.tempo_suspeito = 0;
             }
             else
             {
@@ -401,6 +441,7 @@ int jogo()
                     guarda.x = guarda.origemX;
                     guarda.y = guarda.origemY;
                     guarda.alerta = 0;
+                    guarda.tempo_suspeito = 0;
                 }
                 else
                 {
