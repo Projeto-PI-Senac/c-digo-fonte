@@ -7,6 +7,7 @@
 #include <allegro5/allegro_ttf.h>        // carregar fontes personalizadas
 #include <allegro5/allegro_image.h>      // carregar imagens
 #include <math.h>
+#include "sprites.h"
 
 #define LARGURA_TELA 800
 #define ALTURA_TELA 600
@@ -43,6 +44,9 @@ int jogo()
     // Inicialização
 
     ALLEGRO_DISPLAY *janela = al_create_display(LARGURA_TELA, ALTURA_TELA);
+
+    sprites_inicializar();
+
     ALLEGRO_EVENT_QUEUE *eventos = al_create_event_queue();
 
     al_register_event_source(eventos, al_get_keyboard_event_source());
@@ -238,29 +242,19 @@ int jogo()
             int chave_x_tela = chave_x_mundo - cam_x;
             int chave_y_tela = chave_y_mundo - cam_y;
 
-            al_draw_filled_rectangle(chave_x_tela, chave_y_tela, chave_x_tela + TAMANHO_PIXEL, chave_y_tela + TAMANHO_PIXEL, al_map_rgb(255, 255, 0));
+            sprites_desenhar_chave(chave_x_tela, chave_y_tela);
         }
 
         int player_x_tela = jogador_x_mundo - cam_x;
         int player_y_tela = jogador_y_mundo - cam_y;
 
-        al_draw_filled_rectangle(
-            player_x_tela,
-            player_y_tela,
-            player_x_tela + TAMANHO_PIXEL,
-            player_y_tela + TAMANHO_PIXEL,
-            al_map_rgb(255, 0, 0));
+        sprites_desenhar_jogador(player_x_tela, player_y_tela);
 
         int inimigo_x_tela = guarda.x - cam_x;
         int inimigo_y_tela = guarda.y - cam_y;
 
         // Corpo do guarda
-        al_draw_filled_rectangle(
-            inimigo_x_tela,
-            inimigo_y_tela,
-            inimigo_x_tela + TAMANHO_PIXEL,
-            inimigo_y_tela + TAMANHO_PIXEL,
-            al_map_rgb(0, 255, 0));
+        sprites_desenhar_guarda(inimigo_x_tela, inimigo_y_tela);
 
         // ponto de exclamação encima do guarda
         if (guarda.alerta == 1)
@@ -276,9 +270,10 @@ int jogo()
 
         int npc_x_tela = mentor.x - cam_x;
         int npc_y_tela = mentor.y - cam_y;
-        al_draw_filled_rectangle(npc_x_tela, npc_y_tela, npc_x_tela + TAMANHO_PIXEL, npc_y_tela + TAMANHO_PIXEL, al_map_rgb(255, 0, 255));
+        
+        sprites_desenhar_npc(npc_x_tela, npc_y_tela);
 
-        // Se o NPC estiver ativo, desenha a caixa de diálogo
+       // Se o NPC estiver ativo, desenha a caixa de diálogo
         if (mentor.ativo)
         {
             al_draw_filled_rectangle(50, ALTURA_TELA - 130, LARGURA_TELA - 50, ALTURA_TELA - 20, al_map_rgb(20, 20, 20));
@@ -471,6 +466,8 @@ int jogo()
 
         al_flip_display();
     } // Fim do while(jogando)
+
+    sprites_finalizar();
 
     al_destroy_event_queue(eventos);
     al_destroy_display(janela);
