@@ -35,10 +35,11 @@ void sprites_inicializar(void)
 }
 
 
-// Desenha uma imagem ou um retangulo provisório
-static void desenhar_sprite(ALLEGRO_BITMAP *imagem,
-                            float x, float y,
-                            ALLEGRO_COLOR cor)
+// Desenha uma imagem ou um retangulo provisório com largura e altura personalizadas
+void sprites_desenhar_tamanho(ALLEGRO_BITMAP *imagem,
+                              float x, float y,
+                              float largura, float altura,
+                              ALLEGRO_COLOR cor_fallback)
 {
     if (imagem != NULL)
     {
@@ -48,8 +49,8 @@ static void desenhar_sprite(ALLEGRO_BITMAP *imagem,
             al_get_bitmap_width(imagem),
             al_get_bitmap_height(imagem),
             x, y,
-            TAMANHO_SPRITE,
-            TAMANHO_SPRITE,
+            largura,
+            altura,
             0
         );
     }
@@ -57,49 +58,56 @@ static void desenhar_sprite(ALLEGRO_BITMAP *imagem,
     {
         al_draw_filled_rectangle(
             x, y,
-            x + TAMANHO_SPRITE,
-            y + TAMANHO_SPRITE,
-            cor
+            x + largura,
+            y + altura,
+            cor_fallback
         );
     }
 }
 
 
-// Desenha o jogador
+// Desenha o jogador (40x40)
 void sprites_desenhar_jogador(float x, float y)
 {
-    desenhar_sprite(
+    sprites_desenhar_tamanho(
         personagem, x, y,
+        TAMANHO_SPRITE, TAMANHO_SPRITE,
         al_map_rgb(255, 0, 0)
     );
 }
 
 
-// Desenha o guarda
+// Desenha o guarda (40x40)
 void sprites_desenhar_guarda(float x, float y)
 {
-    desenhar_sprite(
+    sprites_desenhar_tamanho(
         guarda, x, y,
+        TAMANHO_SPRITE, TAMANHO_SPRITE,
         al_map_rgb(0, 255, 0)
     );
 }
 
 
-// Desenha o NPC
+// Desenha o NPC (40x40)
 void sprites_desenhar_npc(float x, float y)
 {
-    desenhar_sprite(
+    sprites_desenhar_tamanho(
         npc, x, y,
+        TAMANHO_SPRITE, TAMANHO_SPRITE,
         al_map_rgb(255, 0, 255)
     );
 }
 
 
-// Desenha a chave
+// Desenha a chave menor (24x24) e centralizada dentro do bloco 40x40
 void sprites_desenhar_chave(float x, float y)
 {
-    desenhar_sprite(
-        chave, x, y,
+    float tamanho_chave = 24.0f;
+    float offset = (TAMANHO_SPRITE - tamanho_chave) / 2.0f;
+
+    sprites_desenhar_tamanho(
+        chave, x + offset, y + offset,
+        tamanho_chave, tamanho_chave,
         al_map_rgb(255, 255, 0)
     );
 }
