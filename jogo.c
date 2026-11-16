@@ -67,6 +67,20 @@ int jogo()
     int jogador_linha = 12; 
     int jogador_coluna = 20;
 
+    //Adicionado
+    bool jogador_virado_esquerda = false;
+    bool guarda_virado_esquerda = false;
+
+    // Pistas históricas do período (posições livres no mapa)
+    bool jornal_coletado = false;
+    int jornal_linha = 7, jornal_coluna = 4;
+
+    bool documento_coletado = false;
+    int documento_linha = 17, documento_coluna = 34;
+
+    int timer_aviso_pista = 0;
+    char texto_pista_atual[160] = "";
+
     int mapa[LINHAS_MAPA][COLUNAS_MAPA] = {
         {  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
         {  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
@@ -178,10 +192,13 @@ int jogo()
             int coluna = jogador_coluna;
             bool moveu = false;
 
+
+            //alterado
             if (al_key_down(&key_state, ALLEGRO_KEY_UP)) { linha--; moveu = true; }
             else if (al_key_down(&key_state, ALLEGRO_KEY_DOWN)) { linha++; moveu = true; }
-            else if (al_key_down(&key_state, ALLEGRO_KEY_LEFT)) { coluna--; moveu = true; }
-            else if (al_key_down(&key_state, ALLEGRO_KEY_RIGHT)) { coluna++; moveu = true; }
+            else if (al_key_down(&key_state, ALLEGRO_KEY_LEFT)) { coluna--; moveu = true; jogador_virado_esquerda = true; }
+            else if (al_key_down(&key_state, ALLEGRO_KEY_RIGHT)) { coluna++; moveu = true; jogador_virado_esquerda = false; }
+
 
             if (moveu && linha >= 0 && linha < LINHAS_MAPA && coluna >= 0 && coluna < COLUNAS_MAPA)
             {
@@ -196,6 +213,22 @@ int jogo()
 
         int jogador_x_mundo = jogador_coluna * TAMANHO_PIXEL;
         int jogador_y_mundo = jogador_linha * TAMANHO_PIXEL;
+
+        //Adicionado
+        if (!jornal_coletado && jogador_linha == jornal_linha && jogador_coluna == jornal_coluna)
+        {
+            jornal_coletado = true;
+            timer_aviso_pista = 240;
+            strcpy(texto_pista_atual, "PISTA 1: Jornal de Abril de 1964 - Manchete sobre a deposicao de Joao Goulart!");
+        }
+
+        if (!documento_coletado && jogador_linha == documento_linha && jogador_coluna == documento_coluna)
+        {
+            documento_coletado = true;
+            timer_aviso_pista = 240;
+            strcpy(texto_pista_atual, "PISTA 2: Arquivo Confidencial - Relatorio de censura e vigilancia politica.");
+        }
+        
 
         float dist_npc = sqrt(pow(jogador_x_mundo - mentor.x, 2) + pow(jogador_y_mundo - mentor.y, 2));
         mentor.ativo = (dist_npc < 60.0);
@@ -213,8 +246,37 @@ int jogo()
             al_draw_bitmap(mapa_fundo, 0, 0, 0);
         }
 
-        sprites_desenhar_jogador(jogador_x_mundo, jogador_y_mundo);
-        sprites_desenhar_guarda(guarda.x, guarda.y);
+
+        //Alterado
+        if (!jornal_coletado)
+        {
+            sprites_desenhar_jornal(jornal_coluna * TAMANHO_PIXEL, jornal_linha * TAMANHO_PIXEL);
+        }
+        if (!documento_coletado)
+        {
+            sprites_desenhar_documento(documento_coluna * TAMANHO_PIXEL, documento_linha * TAMANHO_PIXEL);
+        }
+
+        guarda_virado_esquerda = (jogador_x_mundo < guarda.x);
+        sprites_desenhar_jogador(jogador_x_mundo, jogador_y_mundo, jogador_virado_esquerda);
+        sprites_desenhar_guarda(guarda.x, guarda.y, guarda_virado_esquerda);
+
+        // HUD superior com contador de pistas coletadas
+        int total_pistas = (jornal_coletado ? 1 : 0) + (documento_coletado ? 1 : 0);
+        char hud_pistas[50];
+        sprintf(hud_pistas, "Pistas historicas: %d/2", total_pistas);
+        al_draw_filled_rectangle(20, 20, 310, 62, al_map_rgba(15, 15, 15, 210));
+        al_draw_rectangle(20, 20, 310, 62, al_map_rgb(220, 200, 80), 2.0);
+        al_draw_text(fonte_dialogo, al_map_rgb(255, 255, 255), 35, 29, 0, hud_pistas);
+
+        // Banner temporário quando encontra uma pista
+        if (timer_aviso_pista > 0)
+        {
+            timer_aviso_pista--;
+            al_draw_filled_rectangle(150, 80, LARGURA_TELA - 150, 135, al_map_rgb(20, 30, 50));
+            al_draw_rectangle(150, 80, LARGURA_TELA - 150, 135, al_map_rgb(255, 215, 0), 2.0);
+            al_draw_text(fonte_dialogo, al_map_rgb(255, 230, 120), 175, 95, 0, texto_pista_atual);
+        }
 
         if (guarda.alerta == 1)
         {
