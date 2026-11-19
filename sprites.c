@@ -69,8 +69,9 @@ void sprites_inicializar(void)
         al_init_image_addon();
     }
 
-    personagem = al_load_bitmap("Sprites/personagem.png");
-    if (!personagem) personagem = al_load_bitmap("./Sprites/personagem.png");
+    personagem = al_load_bitmap("Sprites/Protagonista/ParadoDeFrente/parado_0.png");
+    if (!personagem) personagem = al_load_bitmap("Sprites/personagem.png");
+
 
     guarda_fallback = al_load_bitmap("Sprites/guarda.png");
 
@@ -172,6 +173,9 @@ void sprites_desenhar_guarda_animado(float x, float y, int direcao, bool andando
         else                              frame_atual = guarda_parado_frente[passo_anim % 5];
     }
 
+
+    if (frame_atual == NULL) frame_atual = guarda_parado_frente[0];
+
     if (frame_atual == NULL)
     {
         frame_atual = guarda_fallback;
@@ -208,6 +212,9 @@ void sprites_desenhar_mentor_animado(float x, float y, int direcao, bool andando
         else if (direcao == DIR_COSTAS)   frame_atual = mentor_parado_tras[passo_anim % 5];
         else                              frame_atual = mentor_parado_frente[passo_anim % 5];
     }
+
+
+    if (frame_atual == NULL) frame_atual = mentor_parado_frente[0];
 
     if (frame_atual == NULL)
     {
