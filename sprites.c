@@ -90,7 +90,7 @@ void sprites_inicializar(void)
     carregar_sequencia(guarda_andar_frente,  5, "Sprites/Soldado militar/AndandoPraFrente/Andando_frente_%d.png", 0);
     carregar_sequencia(guarda_andar_tras,    5, "Sprites/Soldado militar/AndandoPraTras/Andando_trás_%d.png", 0);
     carregar_sequencia(guarda_alerta,        6, "Sprites/Soldado militar/EstadoDeAlerta/Alerta_%d.png", 0);
-    carregar_sequencia(guarda_parado_frente, 5, "Sprites/Soldado militar/ParadoDeFrente/parado%d.png", 1);
+    carregar_sequencia(guarda_parado_frente, 5, "Sprites/Soldado militar/ParadoDeFrente/parado%d.png.png", 1);
     carregar_sequencia(guarda_parado_tras,   5, "Sprites/Soldado militar/ParadoDeCostas/parado_trás_%d.png", 0);
     carregar_sequencia(guarda_parado_dir,    4, "Sprites/Soldado militar/ParadoPraDireita/ParadoDir_%d.png", 0);
     carregar_sequencia(guarda_parado_esq,    5, "Sprites/Soldado militar/ParadoPraEsquerda/ParadoEsq_%d.png", 0);
