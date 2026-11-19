@@ -68,6 +68,11 @@ int jogo()
         mapa_fundo = al_load_bitmap("Sprites/mapa.png");
     }
 
+     ALLEGRO_BITMAP *mapa_noite = al_load_bitmap("Sprites/Mapa A Noite.png");
+    if (!mapa_noite) {
+        mapa_noite = al_load_bitmap("./Sprites/Mapa A Noite.png");
+    }
+
     // CRIANDO O TIMER DE 60 FPS FIXOS
     ALLEGRO_TIMER *timer = al_create_timer(1.0 / 60.0);
     ALLEGRO_EVENT_QUEUE *eventos = al_create_event_queue();
@@ -95,6 +100,10 @@ int jogo()
 
     bool peca2_coletada = false;
     int peca2_linha = 17, peca2_coluna = 34;
+
+     // Chave da Ditadura (aparece no mapa noturno da Fase 3)
+    bool chave_ditadura_coletada = false;
+    int chave_linha = 16, chave_coluna = 35;
 
     int timer_aviso_pista = 0;
     char texto_pista_atual[160] = "";
@@ -231,6 +240,18 @@ int jogo()
                     strcpy(texto_pista_atual, "PECA 2: Componente misterioso coletado!");
                 }
             }
+
+            // COLETA DA CHAVE NO MAPA NOTURNO DA DITADURA
+            if (estado_missao == 3 && !chave_ditadura_coletada)
+            {
+                if (jogador_linha == chave_linha && jogador_coluna == chave_coluna)
+                {
+                    chave_ditadura_coletada = true;
+                    timer_aviso_pista = 240;
+                    strcpy(texto_pista_atual, "CHAVE COLETADA: Voce encontrou a chave dos arquivos secretos!");
+                }
+            }
+
 
             float dist_npc = sqrt(pow(jogador_x_mundo - mentor.x, 2) + pow(jogador_y_mundo - mentor.y, 2));
             mentor.ativo = (dist_npc < 60.0);
@@ -430,10 +451,23 @@ int jogo()
 
             al_clear_to_color(al_map_rgb(0, 0, 0));
 
-            if (mapa_fundo != NULL)
+
+
+            if (estado_missao == 3 && mapa_noite != NULL)
+            {
+                al_draw_bitmap(mapa_noite, 0, 0, 0);
+            }
+            else if (mapa_fundo != NULL)
             {
                 al_draw_bitmap(mapa_fundo, 0, 0, 0);
             }
+
+            // Desenha o sprite da chave (KEY.png) no mapa noturno da Ditadura
+            if (estado_missao == 3 && !chave_ditadura_coletada)
+            {
+                sprites_desenhar_chave(chave_coluna * TAMANHO_PIXEL, chave_linha * TAMANHO_PIXEL);
+            }
+
 
             if (estado_missao != 3)
             {
@@ -569,6 +603,12 @@ int jogo()
     if (mapa_fundo) {
         al_destroy_bitmap(mapa_fundo);
     }
+
+      if (mapa_noite) {
+        al_destroy_bitmap(mapa_noite);
+    }
+
+    
     if (fonte_dialogo) {
         al_destroy_font(fonte_dialogo);
     }

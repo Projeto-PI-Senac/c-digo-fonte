@@ -32,9 +32,9 @@ void sprites_inicializar(void)
     if (!npc) npc = al_load_bitmap("./Sprites/npc_mentor.png");
     if (!npc) npc = al_load_bitmap("npc_mentor.png");
 
-    chave = al_load_bitmap("Sprites/chave.png");
-    if (!chave) chave = al_load_bitmap("./Sprites/chave.png");
-    if (!chave) chave = al_load_bitmap("chave.png");
+     chave = al_load_bitmap("Sprites/KEY.png");
+    if (!chave) chave = al_load_bitmap("./Sprites/KEY.png");
+    if (!chave) chave = al_load_bitmap("Sprites/chave.png");
 
     jornal = al_load_bitmap("Sprites/jornal.png");
     if (!jornal) jornal = al_load_bitmap("./Sprites/jornal.png");
