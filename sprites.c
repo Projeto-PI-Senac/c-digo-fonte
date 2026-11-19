@@ -8,11 +8,47 @@
 #define TAMANHO_SPRITE 40
 
 static ALLEGRO_BITMAP *personagem = NULL;
-static ALLEGRO_BITMAP *guarda = NULL;
+static ALLEGRO_BITMAP *guarda_fallback = NULL;
 static ALLEGRO_BITMAP *npc = NULL;
 static ALLEGRO_BITMAP *chave = NULL;
 static ALLEGRO_BITMAP *jornal = NULL;
 static ALLEGRO_BITMAP *documento = NULL;
+
+// Arrays de animação do Soldado Militar
+static ALLEGRO_BITMAP *guarda_andar_dir[4]    = {NULL};
+static ALLEGRO_BITMAP *guarda_andar_esq[4]    = {NULL};
+static ALLEGRO_BITMAP *guarda_andar_frente[5] = {NULL};
+static ALLEGRO_BITMAP *guarda_andar_tras[5]   = {NULL};
+static ALLEGRO_BITMAP *guarda_alerta[6]       = {NULL};
+static ALLEGRO_BITMAP *guarda_parado_frente[5]= {NULL};
+static ALLEGRO_BITMAP *guarda_parado_tras[5]  = {NULL};
+static ALLEGRO_BITMAP *guarda_parado_dir[4]   = {NULL};
+static ALLEGRO_BITMAP *guarda_parado_esq[5]   = {NULL};
+
+static int contador_anim_guarda = 0;
+
+// Função auxiliar para carregar sequências de frames numerados
+static void carregar_sequencia(ALLEGRO_BITMAP **lista, int qtd, const char *padrao, int inicio_indice)
+{
+    char caminho[256];
+    for (int i = 0; i < qtd; i++)
+    {
+        sprintf(caminho, padrao, i + inicio_indice);
+        lista[i] = al_load_bitmap(caminho);
+    }
+}
+
+static void destruir_sequencia(ALLEGRO_BITMAP **lista, int qtd)
+{
+    for (int i = 0; i < qtd; i++)
+    {
+        if (lista[i] != NULL)
+        {
+            al_destroy_bitmap(lista[i]);
+            lista[i] = NULL;
+        }
+    }
+}
 
 void sprites_inicializar(void)
 {
@@ -22,34 +58,34 @@ void sprites_inicializar(void)
 
     personagem = al_load_bitmap("Sprites/personagem.png");
     if (!personagem) personagem = al_load_bitmap("./Sprites/personagem.png");
-    if (!personagem) personagem = al_load_bitmap("personagem.png");
 
-    guarda = al_load_bitmap("Sprites/guarda.png");
-    if (!guarda) guarda = al_load_bitmap("./Sprites/guarda.png");
-    if (!guarda) guarda = al_load_bitmap("guarda.png");
+    guarda_fallback = al_load_bitmap("Sprites/guarda.png");
 
     npc = al_load_bitmap("Sprites/npc_mentor.png");
     if (!npc) npc = al_load_bitmap("./Sprites/npc_mentor.png");
-    if (!npc) npc = al_load_bitmap("npc_mentor.png");
 
-     chave = al_load_bitmap("Sprites/KEY.png");
+    chave = al_load_bitmap("Sprites/KEY.png");
     if (!chave) chave = al_load_bitmap("./Sprites/KEY.png");
     if (!chave) chave = al_load_bitmap("Sprites/chave.png");
 
     jornal = al_load_bitmap("Sprites/jornal.png");
-    if (!jornal) jornal = al_load_bitmap("./Sprites/jornal.png");
-    if (!jornal) jornal = al_load_bitmap("jornal.png");
-
     documento = al_load_bitmap("Sprites/documento.png");
-    if (!documento) documento = al_load_bitmap("./Sprites/documento.png");
-    if (!documento) documento = al_load_bitmap("documento.png");
 
-    if (!personagem) printf("[INFO] Usando bloco colorido para o personagem.\n");
-    if (!guarda)     printf("[INFO] Usando bloco colorido para o guarda.\n");
-    if (!npc)        printf("[INFO] Usando bloco colorido para o NPC.\n");
-    if (!chave)      printf("[INFO] Usando bloco colorido para a chave.\n");
-    if (!jornal)     printf("[INFO] Usando bloco colorido para o jornal.\n");
-    if (!documento)  printf("[INFO] Usando bloco colorido para o documento.\n");
+    // Carrega todas as pastas de animação do Soldado Militar
+    carregar_sequencia(guarda_andar_dir,    4, "Sprites/Soldado militar/AndandoPraDireita/AndandoDir_%d.png", 0);
+    carregar_sequencia(guarda_andar_esq,    4, "Sprites/Soldado militar/AndandoPraEsquerda/AndandoEsq_%d.png", 0);
+    carregar_sequencia(guarda_andar_frente, 5, "Sprites/Soldado militar/AndandoPraFrente/Andando_frente_%d.png", 0);
+    carregar_sequencia(guarda_andar_tras,   5, "Sprites/Soldado militar/AndandoPraTras/Andando_trás_%d.png", 0);
+    carregar_sequencia(guarda_alerta,       6, "Sprites/Soldado militar/EstadoDeAlerta/Alerta_%d.png", 0);
+    carregar_sequencia(guarda_parado_frente,5, "Sprites/Soldado militar/ParadoDeFrente/parado%d.png", 1);
+    carregar_sequencia(guarda_parado_tras,  5, "Sprites/Soldado militar/ParadoDeCostas/parado_trás_%d.png", 0);
+    carregar_sequencia(guarda_parado_dir,   4, "Sprites/Soldado militar/ParadoPraDireita/ParadoDir_%d.png", 0);
+    carregar_sequencia(guarda_parado_esq,   5, "Sprites/Soldado militar/ParadoPraEsquerda/ParadoEsq_%d.png", 0);
+
+    if (guarda_parado_frente[0] != NULL)
+        printf("[OK] Animacoes do Soldado Militar carregadas com sucesso!\n");
+    else
+        printf("[AVISO] Verifique o caminho da pasta Sprites/Soldado militar.\n");
 }
 
 void sprites_desenhar_tamanho(ALLEGRO_BITMAP *imagem,
@@ -82,7 +118,45 @@ void sprites_desenhar_jogador(float x, float y, bool virado_esquerda)
 
 void sprites_desenhar_guarda(float x, float y, bool virado_esquerda)
 {
-    sprites_desenhar_tamanho(guarda, x, y, TAMANHO_SPRITE, TAMANHO_SPRITE, virado_esquerda, al_map_rgb(200, 40, 40));
+    int dir = virado_esquerda ? DIR_ESQUERDA : DIR_DIREITA;
+    sprites_desenhar_guarda_animado(x, y, dir, false, 0);
+}
+
+void sprites_desenhar_guarda_animado(float x, float y, int direcao, bool andando, int alerta)
+{
+    contador_anim_guarda++;
+    int passo_anim = contador_anim_guarda / 8; // Troca o frame a cada 8 ticks (~7.5 FPS de animação)
+
+    ALLEGRO_BITMAP *frame_atual = NULL;
+
+    if (alerta == 1)
+    {
+        frame_atual = guarda_alerta[passo_anim % 6];
+    }
+    else if (andando)
+    {
+        if (direcao == DIR_DIREITA)       frame_atual = guarda_andar_dir[passo_anim % 4];
+        else if (direcao == DIR_ESQUERDA) frame_atual = guarda_andar_esq[passo_anim % 4];
+        else if (direcao == DIR_COSTAS)   frame_atual = guarda_andar_tras[passo_anim % 5];
+        else                              frame_atual = guarda_andar_frente[passo_anim % 5];
+    }
+    else
+    {
+        if (direcao == DIR_DIREITA)       frame_atual = guarda_parado_dir[passo_anim % 4];
+        else if (direcao == DIR_ESQUERDA) frame_atual = guarda_parado_esq[passo_anim % 5];
+        else if (direcao == DIR_COSTAS)   frame_atual = guarda_parado_tras[passo_anim % 5];
+        else                              frame_atual = guarda_parado_frente[passo_anim % 5];
+    }
+
+    if (frame_atual == NULL)
+    {
+        frame_atual = guarda_fallback;
+    }
+
+    // Desenha um pouco maior (48x48) centralizado no tile 40x40 para o soldado ficar bem visível
+    float tamanho_visual = 48.0f;
+    float offset = (TAMANHO_SPRITE - tamanho_visual) / 2.0f;
+    sprites_desenhar_tamanho(frame_atual, x + offset, y + offset, tamanho_visual, tamanho_visual, false, al_map_rgb(200, 40, 40));
 }
 
 void sprites_desenhar_npc(float x, float y)
@@ -113,10 +187,20 @@ void sprites_desenhar_documento(float x, float y)
 
 void sprites_finalizar(void)
 {
-    if (personagem) { al_destroy_bitmap(personagem); personagem = NULL; }
-    if (guarda) { al_destroy_bitmap(guarda); guarda = NULL; }
-    if (npc) { al_destroy_bitmap(npc); npc = NULL; }
-    if (chave) { al_destroy_bitmap(chave); chave = NULL; }
-    if (jornal) { al_destroy_bitmap(jornal); jornal = NULL; }
-    if (documento) { al_destroy_bitmap(documento); documento = NULL; }
+    if (personagem)      { al_destroy_bitmap(personagem); personagem = NULL; }
+    if (guarda_fallback) { al_destroy_bitmap(guarda_fallback); guarda_fallback = NULL; }
+    if (npc)             { al_destroy_bitmap(npc); npc = NULL; }
+    if (chave)           { al_destroy_bitmap(chave); chave = NULL; }
+    if (jornal)          { al_destroy_bitmap(jornal); jornal = NULL; }
+    if (documento)       { al_destroy_bitmap(documento); documento = NULL; }
+
+    destruir_sequencia(guarda_andar_dir, 4);
+    destruir_sequencia(guarda_andar_esq, 4);
+    destruir_sequencia(guarda_andar_frente, 5);
+    destruir_sequencia(guarda_andar_tras, 5);
+    destruir_sequencia(guarda_alerta, 6);
+    destruir_sequencia(guarda_parado_frente, 5);
+    destruir_sequencia(guarda_parado_tras, 5);
+    destruir_sequencia(guarda_parado_dir, 4);
+    destruir_sequencia(guarda_parado_esq, 5);
 }

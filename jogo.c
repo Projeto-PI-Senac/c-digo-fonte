@@ -89,6 +89,8 @@ int jogo()
 
     bool jogador_virado_esquerda = false;
     bool guarda_virado_esquerda = false;
+    int guarda_direcao = DIR_FRENTE;
+    bool guarda_andando = false;
 
     // CONTROLE DE ESTADOS
     int estado_missao = 0; 
@@ -492,10 +494,23 @@ int jogo()
             guarda_virado_esquerda = (jogador_x_mundo < guarda.x);
             sprites_desenhar_jogador(jogador_x_mundo, jogador_y_mundo, jogador_virado_esquerda);
             
+
+
             if (estado_missao == 3)
             {
-                sprites_desenhar_guarda(guarda.x, guarda.y, guarda_virado_esquerda);
+             float diff_x = jogador_x_mundo - guarda.x;
+             float diff_y = jogador_y_mundo - guarda.y;
+             guarda_andando = (guarda.alerta == 2 || guarda.alerta == 3);
+
+             if (fabs(diff_x) > fabs(diff_y))
+                 guarda_direcao = (diff_x < 0) ? DIR_ESQUERDA : DIR_DIREITA;
+             else
+                 guarda_direcao = (diff_y < 0) ? DIR_COSTAS : DIR_FRENTE;
+
+             sprites_desenhar_guarda_animado(guarda.x, guarda.y, guarda_direcao, guarda_andando, guarda.alerta);
             }
+
+            
 
             if (itens_visiveis)
             {
