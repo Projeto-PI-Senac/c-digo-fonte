@@ -577,7 +577,25 @@ int jogo()
                 al_draw_filled_rectangle(centro_x - 4, topo_y + 26, centro_x + 4, topo_y + 34, al_map_rgb(255, 255, 0));
             }
 
-            sprites_desenhar_npc(mentor.x, mentor.y);
+            
+
+                     if (estado_missao != 3)
+         {
+             int mentor_direcao = DIR_FRENTE;
+             if (mentor.ativo)
+             {
+                 float diff_mx = jogador_x_mundo - mentor.x;
+                 float diff_my = jogador_y_mundo - mentor.y;
+                 if (fabs(diff_mx) > fabs(diff_my))
+                     mentor_direcao = (diff_mx < 0) ? DIR_ESQUERDA : DIR_DIREITA;
+                 else
+                     mentor_direcao = (diff_my < 0) ? DIR_COSTAS : DIR_FRENTE;
+             }
+             sprites_desenhar_mentor_animado(mentor.x, mentor.y, mentor_direcao, false);
+         }
+
+
+
 
             if (mentor.ativo && !mentor.interagindo && estado_missao != 3)
             {

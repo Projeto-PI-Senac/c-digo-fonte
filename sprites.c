@@ -9,23 +9,34 @@
 
 static ALLEGRO_BITMAP *personagem = NULL;
 static ALLEGRO_BITMAP *guarda_fallback = NULL;
-static ALLEGRO_BITMAP *npc = NULL;
+static ALLEGRO_BITMAP *npc_fallback = NULL;
 static ALLEGRO_BITMAP *chave = NULL;
 static ALLEGRO_BITMAP *jornal = NULL;
 static ALLEGRO_BITMAP *documento = NULL;
 
 // Arrays de animação do Soldado Militar
-static ALLEGRO_BITMAP *guarda_andar_dir[4]    = {NULL};
-static ALLEGRO_BITMAP *guarda_andar_esq[4]    = {NULL};
-static ALLEGRO_BITMAP *guarda_andar_frente[5] = {NULL};
-static ALLEGRO_BITMAP *guarda_andar_tras[5]   = {NULL};
-static ALLEGRO_BITMAP *guarda_alerta[6]       = {NULL};
-static ALLEGRO_BITMAP *guarda_parado_frente[5]= {NULL};
-static ALLEGRO_BITMAP *guarda_parado_tras[5]  = {NULL};
-static ALLEGRO_BITMAP *guarda_parado_dir[4]   = {NULL};
-static ALLEGRO_BITMAP *guarda_parado_esq[5]   = {NULL};
+static ALLEGRO_BITMAP *guarda_andar_dir[4]     = {NULL};
+static ALLEGRO_BITMAP *guarda_andar_esq[4]     = {NULL};
+static ALLEGRO_BITMAP *guarda_andar_frente[5]  = {NULL};
+static ALLEGRO_BITMAP *guarda_andar_tras[5]    = {NULL};
+static ALLEGRO_BITMAP *guarda_alerta[6]        = {NULL};
+static ALLEGRO_BITMAP *guarda_parado_frente[5] = {NULL};
+static ALLEGRO_BITMAP *guarda_parado_tras[5]   = {NULL};
+static ALLEGRO_BITMAP *guarda_parado_dir[4]    = {NULL};
+static ALLEGRO_BITMAP *guarda_parado_esq[5]    = {NULL};
+
+// Arrays de animação do Mentor
+static ALLEGRO_BITMAP *mentor_andar_dir[8]     = {NULL};
+static ALLEGRO_BITMAP *mentor_andar_esq[8]     = {NULL};
+static ALLEGRO_BITMAP *mentor_andar_frente[8]  = {NULL};
+static ALLEGRO_BITMAP *mentor_andar_tras[6]    = {NULL};
+static ALLEGRO_BITMAP *mentor_parado_frente[5] = {NULL};
+static ALLEGRO_BITMAP *mentor_parado_tras[5]   = {NULL};
+static ALLEGRO_BITMAP *mentor_parado_dir[5]    = {NULL};
+static ALLEGRO_BITMAP *mentor_parado_esq[5]    = {NULL};
 
 static int contador_anim_guarda = 0;
+static int contador_anim_mentor = 0;
 
 // Função auxiliar para carregar sequências de frames numerados
 static void carregar_sequencia(ALLEGRO_BITMAP **lista, int qtd, const char *padrao, int inicio_indice)
@@ -37,6 +48,8 @@ static void carregar_sequencia(ALLEGRO_BITMAP **lista, int qtd, const char *padr
         lista[i] = al_load_bitmap(caminho);
     }
 }
+
+
 
 static void destruir_sequencia(ALLEGRO_BITMAP **lista, int qtd)
 {
@@ -61,8 +74,8 @@ void sprites_inicializar(void)
 
     guarda_fallback = al_load_bitmap("Sprites/guarda.png");
 
-    npc = al_load_bitmap("Sprites/npc_mentor.png");
-    if (!npc) npc = al_load_bitmap("./Sprites/npc_mentor.png");
+    npc_fallback = al_load_bitmap("Sprites/npc_mentor.png");
+    if (!npc_fallback) npc_fallback = al_load_bitmap("./Sprites/npc_mentor.png");
 
     chave = al_load_bitmap("Sprites/KEY.png");
     if (!chave) chave = al_load_bitmap("./Sprites/KEY.png");
@@ -72,20 +85,31 @@ void sprites_inicializar(void)
     documento = al_load_bitmap("Sprites/documento.png");
 
     // Carrega todas as pastas de animação do Soldado Militar
-    carregar_sequencia(guarda_andar_dir,    4, "Sprites/Soldado militar/AndandoPraDireita/AndandoDir_%d.png", 0);
-    carregar_sequencia(guarda_andar_esq,    4, "Sprites/Soldado militar/AndandoPraEsquerda/AndandoEsq_%d.png", 0);
-    carregar_sequencia(guarda_andar_frente, 5, "Sprites/Soldado militar/AndandoPraFrente/Andando_frente_%d.png", 0);
-    carregar_sequencia(guarda_andar_tras,   5, "Sprites/Soldado militar/AndandoPraTras/Andando_trás_%d.png", 0);
-    carregar_sequencia(guarda_alerta,       6, "Sprites/Soldado militar/EstadoDeAlerta/Alerta_%d.png", 0);
-    carregar_sequencia(guarda_parado_frente,5, "Sprites/Soldado militar/ParadoDeFrente/parado%d.png", 1);
-    carregar_sequencia(guarda_parado_tras,  5, "Sprites/Soldado militar/ParadoDeCostas/parado_trás_%d.png", 0);
-    carregar_sequencia(guarda_parado_dir,   4, "Sprites/Soldado militar/ParadoPraDireita/ParadoDir_%d.png", 0);
-    carregar_sequencia(guarda_parado_esq,   5, "Sprites/Soldado militar/ParadoPraEsquerda/ParadoEsq_%d.png", 0);
+    carregar_sequencia(guarda_andar_dir,     4, "Sprites/Soldado militar/AndandoPraDireita/AndandoDir_%d.png", 0);
+    carregar_sequencia(guarda_andar_esq,     4, "Sprites/Soldado militar/AndandoPraEsquerda/AndandoEsq_%d.png", 0);
+    carregar_sequencia(guarda_andar_frente,  5, "Sprites/Soldado militar/AndandoPraFrente/Andando_frente_%d.png", 0);
+    carregar_sequencia(guarda_andar_tras,    5, "Sprites/Soldado militar/AndandoPraTras/Andando_trás_%d.png", 0);
+    carregar_sequencia(guarda_alerta,        6, "Sprites/Soldado militar/EstadoDeAlerta/Alerta_%d.png", 0);
+    carregar_sequencia(guarda_parado_frente, 5, "Sprites/Soldado militar/ParadoDeFrente/parado%d.png", 1);
+    carregar_sequencia(guarda_parado_tras,   5, "Sprites/Soldado militar/ParadoDeCostas/parado_trás_%d.png", 0);
+    carregar_sequencia(guarda_parado_dir,    4, "Sprites/Soldado militar/ParadoPraDireita/ParadoDir_%d.png", 0);
+    carregar_sequencia(guarda_parado_esq,    5, "Sprites/Soldado militar/ParadoPraEsquerda/ParadoEsq_%d.png", 0);
 
-    if (guarda_parado_frente[0] != NULL)
+    // Carrega todas as pastas de animação do Mentor
+    carregar_sequencia(mentor_andar_dir,     8, "Sprites/Mentor/AndandoPraDireita/AndandoDir_%d.png", 0);
+    carregar_sequencia(mentor_andar_esq,     8, "Sprites/Mentor/AndandoPraEsquerda/AndandoEsq_%d.png", 0);
+    carregar_sequencia(mentor_andar_frente,  8, "Sprites/Mentor/AndandoPraFrente/Andando_frente_%d.png", 0);
+    carregar_sequencia(mentor_andar_tras,    6, "Sprites/Mentor/AndandoPraTras/Andando_tras_%d.png", 0);
+    carregar_sequencia(mentor_parado_frente, 5, "Sprites/Mentor/ParadoDeFrente/parado_%d.png", 0);
+    carregar_sequencia(mentor_parado_tras,   5, "Sprites/Mentor/ParadoDeCostas/parado_tras_%d.png", 0);
+    carregar_sequencia(mentor_parado_dir,    5, "Sprites/Mentor/ParadoPraDireita/ParadoDir_%d.png", 0);
+    carregar_sequencia(mentor_parado_esq,    5, "Sprites/Mentor/ParadoPraEsquerda/ParadoEsq_%d.png", 0);
+
+    if (guarda_parado_frente != NULL)
         printf("[OK] Animacoes do Soldado Militar carregadas com sucesso!\n");
-    else
-        printf("[AVISO] Verifique o caminho da pasta Sprites/Soldado militar.\n");
+
+    if (mentor_parado_frente != NULL)
+        printf("[OK] Animacoes do Mentor carregadas com sucesso!\n");
 }
 
 void sprites_desenhar_tamanho(ALLEGRO_BITMAP *imagem,
@@ -125,7 +149,7 @@ void sprites_desenhar_guarda(float x, float y, bool virado_esquerda)
 void sprites_desenhar_guarda_animado(float x, float y, int direcao, bool andando, int alerta)
 {
     contador_anim_guarda++;
-    int passo_anim = contador_anim_guarda / 8; // Troca o frame a cada 8 ticks (~7.5 FPS de animação)
+    int passo_anim = contador_anim_guarda / 8;
 
     ALLEGRO_BITMAP *frame_atual = NULL;
 
@@ -153,7 +177,6 @@ void sprites_desenhar_guarda_animado(float x, float y, int direcao, bool andando
         frame_atual = guarda_fallback;
     }
 
-    // Desenha um pouco maior (48x48) centralizado no tile 40x40 para o soldado ficar bem visível
     float tamanho_visual = 48.0f;
     float offset = (TAMANHO_SPRITE - tamanho_visual) / 2.0f;
     sprites_desenhar_tamanho(frame_atual, x + offset, y + offset, tamanho_visual, tamanho_visual, false, al_map_rgb(200, 40, 40));
@@ -161,7 +184,39 @@ void sprites_desenhar_guarda_animado(float x, float y, int direcao, bool andando
 
 void sprites_desenhar_npc(float x, float y)
 {
-    sprites_desenhar_tamanho(npc, x, y, TAMANHO_SPRITE, TAMANHO_SPRITE, false, al_map_rgb(220, 180, 40));
+    sprites_desenhar_tamanho(npc_fallback, x, y, TAMANHO_SPRITE, TAMANHO_SPRITE, false, al_map_rgb(220, 180, 40));
+}
+
+void sprites_desenhar_mentor_animado(float x, float y, int direcao, bool andando)
+{
+    contador_anim_mentor++;
+    int passo_anim = contador_anim_mentor / 8;
+
+    ALLEGRO_BITMAP *frame_atual = NULL;
+
+    if (andando)
+    {
+        if (direcao == DIR_DIREITA)       frame_atual = mentor_andar_dir[passo_anim % 8];
+        else if (direcao == DIR_ESQUERDA) frame_atual = mentor_andar_esq[passo_anim % 8];
+        else if (direcao == DIR_COSTAS)   frame_atual = mentor_andar_tras[passo_anim % 6];
+        else                              frame_atual = mentor_andar_frente[passo_anim % 8];
+    }
+    else
+    {
+        if (direcao == DIR_DIREITA)       frame_atual = mentor_parado_dir[passo_anim % 5];
+        else if (direcao == DIR_ESQUERDA) frame_atual = mentor_parado_esq[passo_anim % 5];
+        else if (direcao == DIR_COSTAS)   frame_atual = mentor_parado_tras[passo_anim % 5];
+        else                              frame_atual = mentor_parado_frente[passo_anim % 5];
+    }
+
+    if (frame_atual == NULL)
+    {
+        frame_atual = npc_fallback;
+    }
+
+    float tamanho_visual = 48.0f;
+    float offset = (TAMANHO_SPRITE - tamanho_visual) / 2.0f;
+    sprites_desenhar_tamanho(frame_atual, x + offset, y + offset, tamanho_visual, tamanho_visual, false, al_map_rgb(220, 180, 40));
 }
 
 void sprites_desenhar_chave(float x, float y)
@@ -189,11 +244,10 @@ void sprites_finalizar(void)
 {
     if (personagem)      { al_destroy_bitmap(personagem); personagem = NULL; }
     if (guarda_fallback) { al_destroy_bitmap(guarda_fallback); guarda_fallback = NULL; }
-    if (npc)             { al_destroy_bitmap(npc); npc = NULL; }
+    if (npc_fallback)    { al_destroy_bitmap(npc_fallback); npc_fallback = NULL; }
     if (chave)           { al_destroy_bitmap(chave); chave = NULL; }
     if (jornal)          { al_destroy_bitmap(jornal); jornal = NULL; }
     if (documento)       { al_destroy_bitmap(documento); documento = NULL; }
-
     destruir_sequencia(guarda_andar_dir, 4);
     destruir_sequencia(guarda_andar_esq, 4);
     destruir_sequencia(guarda_andar_frente, 5);
@@ -203,4 +257,12 @@ void sprites_finalizar(void)
     destruir_sequencia(guarda_parado_tras, 5);
     destruir_sequencia(guarda_parado_dir, 4);
     destruir_sequencia(guarda_parado_esq, 5);
+    destruir_sequencia(mentor_andar_dir, 8);
+    destruir_sequencia(mentor_andar_esq, 8);
+    destruir_sequencia(mentor_andar_frente, 8);
+    destruir_sequencia(mentor_andar_tras, 6);
+    destruir_sequencia(mentor_parado_frente, 5);
+    destruir_sequencia(mentor_parado_tras, 5);
+    destruir_sequencia(mentor_parado_dir, 5);
+    destruir_sequencia(mentor_parado_esq, 5);
 }

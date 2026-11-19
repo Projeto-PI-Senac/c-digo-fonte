@@ -21,6 +21,7 @@ void sprites_desenhar_jogador(float x, float y, bool virado_esquerda);
 void sprites_desenhar_guarda(float x, float y, bool virado_esquerda);
 void sprites_desenhar_guarda_animado(float x, float y, int direcao, bool andando, int alerta);
 void sprites_desenhar_npc(float x, float y);
+void sprites_desenhar_mentor_animado(float x, float y, int direcao, bool andando);
 void sprites_desenhar_chave(float x, float y);
 void sprites_desenhar_jornal(float x, float y);
 void sprites_desenhar_documento(float x, float y);
