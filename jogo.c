@@ -41,6 +41,33 @@ typedef struct {
     float x, y;
 } Figurante;
 
+
+// Verifica se existe alguma caixa ou parede (valor 1) bloqueando a visão entre o guarda e o jogador
+bool guarda_tem_visao_livre(int mapa[LINHAS_MAPA][COLUNAS_MAPA], float x_guarda, float y_guarda, float x_jogador, float y_jogador)
+{
+    int passos = 20;
+    for (int i = 1; i < passos; i++)
+    {
+        float t = (float)i / passos;
+        float check_x = x_guarda + (x_jogador - x_guarda) * t + (TAMANHO_PIXEL / 2.0f);
+        float check_y = y_guarda + (y_jogador - y_guarda) * t + (TAMANHO_PIXEL / 2.0f);
+
+        int col = (int)(check_x / TAMANHO_PIXEL);
+        int lin = (int)(check_y / TAMANHO_PIXEL);
+
+        if (lin >= 0 && lin < LINHAS_MAPA && col >= 0 && col < COLUNAS_MAPA)
+        {
+            if (mapa[lin][col] == 1)
+            {
+                return false; // Tem uma caixa ou parede no meio do caminho!
+            }
+        }
+    }
+    return true;
+}
+
+
+
 int jogo()
 {
     al_init();
@@ -267,32 +294,44 @@ int jogo()
             // LÓGICA DO GUARDA DA DITADURA (SÓ ATIVA NA FASE 3)
             if (estado_missao == 3)
             {
+
                 float dx = jogador_x_mundo - guarda.x;
                 float dy = jogador_y_mundo - guarda.y;
                 float distancia = sqrt(dx * dx + dy * dy);
+                bool visao_livre = guarda_tem_visao_livre(mapa, guarda.x, guarda.y, jogador_x_mundo, jogador_y_mundo);
 
-                if (guarda.alerta == 0 && distancia <= guarda.visao)
+                if (guarda.alerta == 0 && distancia <= guarda.visao && visao_livre)
                 {
+                    // Viu você de relance! Entra em alerta olhando pros lados
                     guarda.alerta = 1;
                     guarda.tempo_suspeito = 0; 
                 }
                 else if (guarda.alerta == 1)
                 {
-                    if (distancia > guarda.visao)
+                    if (distancia > guarda.visao || !visao_livre)
                     {
-                        guarda.alerta = 0;
-                        guarda.tempo_suspeito = 0;
+                        // Você saiu da visão ou se escondeu atrás de uma caixa:
+                        // Ele continua olhando pros lados até completar 2,5 segundos (150 frames) e desiste!
+                        guarda.tempo_suspeito++;
+                        if (guarda.tempo_suspeito > 150)
+                        {
+                            guarda.alerta = 0;
+                            guarda.tempo_suspeito = 0;
+                        }
                     }
                     else
                     {
-                        guarda.tempo_suspeito++;
-                        if (guarda.tempo_suspeito > 30) 
+                        // Você ficou parado na frente dele sem se esconder: perseguição começa em ~1 segundo
+                        guarda.tempo_suspeito += 2;
+                        if (guarda.tempo_suspeito > 150) 
                         {
                             guarda.alerta = 2; 
                         }
                     }
                 }
 
+
+                
                 if (guarda.alerta == 2 && distancia < 25.0f)
                 {
                     jogador_linha = 12;
@@ -332,7 +371,7 @@ int jogo()
                 }
                 else if (guarda.alerta == 3)
                 {
-                    if (distancia <= guarda.visao)
+                    if (distancia <= guarda.visao && visao_livre)
                     {
                         guarda.alerta = 1;
                         guarda.tempo_suspeito = 0;
@@ -510,7 +549,7 @@ int jogo()
              sprites_desenhar_guarda_animado(guarda.x, guarda.y, guarda_direcao, guarda_andando, guarda.alerta);
             }
 
-            
+
 
             if (itens_visiveis)
             {
