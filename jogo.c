@@ -15,6 +15,9 @@
 #define COLUNAS_MAPA 40
 #define TAMANHO_PIXEL 40
 
+#define MAPA_LARGURA_PIXELS (COLUNAS_MAPA * TAMANHO_PIXEL)
+#define MAPA_ALTURA_PIXELS (LINHAS_MAPA * TAMANHO_PIXEL)
+
 typedef struct
 {
     float x, y;
@@ -35,14 +38,18 @@ typedef struct
     bool interagindo;
 } NPC;
 
-// Estrutura simples para os figurantes de fundo da praça
+typedef struct {
+    int linha, coluna;
+    float x, y;
+    bool coletado;
+    char texto_pista[150];
+} PistaMapa;
+
 typedef struct {
     int linha, coluna;
     float x, y;
 } Figurante;
 
-
-// Verifica se existe alguma caixa ou parede (valor 1) bloqueando a visão entre o guarda e o jogador
 bool guarda_tem_visao_livre(int mapa[LINHAS_MAPA][COLUNAS_MAPA], float x_guarda, float y_guarda, float x_jogador, float y_jogador)
 {
     int passos = 20;
@@ -59,14 +66,12 @@ bool guarda_tem_visao_livre(int mapa[LINHAS_MAPA][COLUNAS_MAPA], float x_guarda,
         {
             if (mapa[lin][col] == 1)
             {
-                return false; // Tem uma caixa ou parede no meio do caminho!
+                return false; 
             }
         }
     }
     return true;
 }
-
-
 
 int jogo()
 {
@@ -77,8 +82,6 @@ int jogo()
     al_install_mouse();
     al_install_keyboard();
 
-    // CONFIGURAÇÃO DO V-SYNC: Desativa o V-Sync forçado do monitor, 
-    // deixando o controle de quadros 100% na mão do Timer de 60 FPS.
     al_set_new_display_option(ALLEGRO_VSYNC, 2, ALLEGRO_SUGGEST);
 
     ALLEGRO_DISPLAY *janela = al_create_display(LARGURA_TELA, ALTURA_TELA);
@@ -95,12 +98,11 @@ int jogo()
         mapa_fundo = al_load_bitmap("Sprites/mapa.png");
     }
 
-     ALLEGRO_BITMAP *mapa_noite = al_load_bitmap("Sprites/Mapa A Noite.png");
+    ALLEGRO_BITMAP *mapa_noite = al_load_bitmap("Sprites/Mapa A Noite.png");
     if (!mapa_noite) {
         mapa_noite = al_load_bitmap("./Sprites/Mapa A Noite.png");
     }
 
-    // CRIANDO O TIMER DE 60 FPS FIXOS
     ALLEGRO_TIMER *timer = al_create_timer(1.0 / 60.0);
     ALLEGRO_EVENT_QUEUE *eventos = al_create_event_queue();
 
@@ -119,30 +121,49 @@ int jogo()
     int guarda_direcao = DIR_FRENTE;
     bool guarda_andando = false;
 
-    // CONTROLE DE ESTADOS
     int estado_missao = 0; 
     bool itens_visiveis = false;
+    bool jogador_fardado = false; 
 
-    // Peças perdidas da máquina
     bool peca1_coletada = false;
     int peca1_linha = 7, peca1_coluna = 4;
 
     bool peca2_coletada = false;
     int peca2_linha = 17, peca2_coluna = 34;
 
-     // Chave da Ditadura (aparece no mapa noturno da Fase 3)
+    bool farda_coletada = false;
+    int farda_linha = 11, farda_coluna = 23;
+
+    PistaMapa pistas[2];
+    pistas[0].linha = 15; pistas[0].coluna = 5; pistas[0].coletado = false;
+    strcpy(pistas[0].texto_pista, "PISTA 1: 'O regime militar foi instaurado em 1964.'");
+
+    pistas[1].linha = 10; pistas[1].coluna = 35; pistas[1].coletado = false;
+    strcpy(pistas[1].texto_pista, "PISTA 2: 'O AI-5 foi o ato mais rigoroso de cassaçao.'");
+
     bool chave_ditadura_coletada = false;
     int chave_linha = 16, chave_coluna = 35;
 
     int timer_aviso_pista = 0;
     char texto_pista_atual[160] = "";
 
+    bool modo_digitacao = false;
+    char buffer_resposta[64] = "";
+    int pergunta_ditadura_atual = 0; 
+    bool quiz_ditadura_concluido = false;
+    bool terminal_interagindo = false;
+
+    // Estados extras para telas de Game Over e recado de farda
+    bool tela_game_over = false;
+    char texto_game_over[200] = "";
+    int timer_game_over = 0;
+
     int mapa[LINHAS_MAPA][COLUNAS_MAPA] = {
         {  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
-        {  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
-        {  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
-        {  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
-        {  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+        {  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+        {  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+        {  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+        {  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
         {  1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1 },
         {  1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1 },
         {  1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
@@ -165,8 +186,49 @@ int jogo()
         {  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 }
     };
 
+    int mapa_ditadura[LINHAS_MAPA][COLUNAS_MAPA] = {
+        { 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1 },
+        { 1,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,1 },
+        { 1,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,1 },
+        { 1,0,0,0,1,1,1,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,1,1,1,1,0,0,0,0,1,1,1,1,0,0,0,0,0,1 },
+        { 1,0,0,0,1,1,1,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,1,1,1,1,0,0,0,0,1,0,0,0,1,0,0,0,0,1 },
+        { 1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,1,1,1,1,1 },
+        { 1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1 },
+        { 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,1 },
+        { 1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1 },
+        { 1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1 },
+        { 1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1 },
+        { 1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1 },
+        { 1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1 },
+        { 1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1 },
+        { 1,1,1,1,1,1,0,0,1,1,1,1,1,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,1,0,0,0,1 },
+        { 1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,1,0,0,0,1,0,1,1,0,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,1 },
+        { 1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,1,0,0,0,1,1,1,1,1,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,1 },
+        { 1,1,1,1,0,0,1,1,1,1,0,0,1,0,0,1,0,0,0,1,0,1,1,0,1,1,0,0,1,0,0,0,0,0,0,1,0,0,0,1 },
+        { 1,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,1,1,0,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,1 },
+        { 1,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,1 },
+        { 1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,0,0,1,1,1,1,1,1,0,0,0,0,0,0,1,0,0,0,1 },
+        { 1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1 },
+        { 1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1 },
+        { 1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1 },
+        { 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1 }
+    };
+
+    // Mapa do último estágio (Busca pelo documento secreto final)
+    int mapa_final[LINHAS_MAPA][COLUNAS_MAPA] = {
+        { 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1 },
+        { 1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1 },
+        { 1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,0,1 },
+        { 1,0,1,0,0,0,0,0,1,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0,1 },
+        { 1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,0,1 },
+        { 1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1 },
+        { 1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,0,1 },
+        { 1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1 },
+        { 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1 }
+    };
+
     bool jogando = true;
-    bool redesenhar = true; // Flag para controlar o redesenho apenas no tick do timer
+    bool redesenhar = true;
 
     Inimigo guarda;
     int linhaInicial = 6;
@@ -190,8 +252,16 @@ int jogo()
     mentor.indice_fala = 0;
     mentor.interagindo = false;
 
+    int terminal_linha = 7;
+    int terminal_coluna = 23;
+    bool terminal_ativo = false;
+
+    // Coordenadas do documento secreto final no mapa 8
+    int doc_final_linha = 3;
+    int doc_final_coluna = 35;
+    bool documento_final_coletado = false;
+
     Figurante figurantes[2];
-    
     figurantes[0].linha = 8;
     figurantes[0].coluna = 12;
     figurantes[0].x = figurantes[0].coluna * TAMANHO_PIXEL;
@@ -217,34 +287,58 @@ int jogo()
         ALLEGRO_EVENT event;
         al_wait_for_event(eventos, &event);
 
-        // O TIMER DEFINE A TAXA DE ATUALIZAÇÃO E RENDERIZAÇÃO A 60 FPS FIXOS
         if (event.type == ALLEGRO_EVENT_TIMER)
         {
             redesenhar = true;
 
-            // LEITURA CONTÍNUA DO TECLADO DENTRO DO TIMER (Evita travamentos de movimento)
+            if (tela_game_over)
+            {
+                timer_game_over--;
+                if (timer_game_over <= 0)
+                {
+                    tela_game_over = false;
+                    terminal_interagindo = false;
+                    modo_digitacao = false;
+                    pergunta_ditadura_atual = 0;
+                    // Reseta posição para fora da base
+                    jogador_linha = 9;
+                    jogador_coluna = 1;
+                }
+                continue;
+            }
+
             ALLEGRO_KEYBOARD_STATE key_state;
             al_get_keyboard_state(&key_state);
 
-            contador_passo++;
-            if (contador_passo >= velocidade_passo)
+            if (!modo_digitacao)
             {
-                int linha = jogador_linha;
-                int coluna = jogador_coluna;
-                bool moveu = false;
-
-                if (al_key_down(&key_state, ALLEGRO_KEY_UP)) { linha--; moveu = true; }
-                else if (al_key_down(&key_state, ALLEGRO_KEY_DOWN)) { linha++; moveu = true; }
-                else if (al_key_down(&key_state, ALLEGRO_KEY_LEFT)) { coluna--; moveu = true; jogador_virado_esquerda = true; }
-                else if (al_key_down(&key_state, ALLEGRO_KEY_RIGHT)) { coluna++; moveu = true; jogador_virado_esquerda = false; }
-
-                if (moveu && linha >= 0 && linha < LINHAS_MAPA && coluna >= 0 && coluna < COLUNAS_MAPA)
+                contador_passo++;
+                if (contador_passo >= velocidade_passo)
                 {
-                    if (mapa[linha][coluna] != 1 && !(linha == mentor.linha && coluna == mentor.coluna))
+                    int linha = jogador_linha;
+                    int coluna = jogador_coluna;
+                    bool moveu = false;
+
+                    if (al_key_down(&key_state, ALLEGRO_KEY_UP)) { linha--; moveu = true; }
+                    else if (al_key_down(&key_state, ALLEGRO_KEY_DOWN)) { linha++; moveu = true; }
+                    else if (al_key_down(&key_state, ALLEGRO_KEY_LEFT)) { coluna--; moveu = true; jogador_virado_esquerda = true; }
+                    else if (al_key_down(&key_state, ALLEGRO_KEY_RIGHT)) { coluna++; moveu = true; jogador_virado_esquerda = false; }
+
+                    int linhas_atual_mapa = (estado_missao == 8) ? 9 : LINHAS_MAPA;
+                    int colunas_atual_mapa = (estado_missao == 8) ? COLUNAS_MAPA : COLUNAS_MAPA;
+
+                    if (moveu && linha >= 0 && linha < linhas_atual_mapa && coluna >= 0 && coluna < colunas_atual_mapa)
                     {
-                        jogador_linha = linha;
-                        jogador_coluna = coluna;
-                        contador_passo = 0;
+                        int obstaculo = 0;
+                        if (estado_missao == 8) obstaculo = mapa_final[linha][coluna];
+                        else obstaculo = mapa[linha][coluna];
+
+                        if (obstaculo != 1 && !(estado_missao != 8 && linha == mentor.linha && coluna == mentor.coluna))
+                        {
+                            jogador_linha = linha;
+                            jogador_coluna = coluna;
+                            contador_passo = 0;
+                        }
                     }
                 }
             }
@@ -252,38 +346,74 @@ int jogo()
             int jogador_x_mundo = jogador_coluna * TAMANHO_PIXEL;
             int jogador_y_mundo = jogador_linha * TAMANHO_PIXEL;
 
-            // COLETA DAS PEÇAS SE VISÍVEIS
-            if (itens_visiveis)
+            if (itens_visiveis && estado_missao != 3 && estado_missao != 8)
             {
                 if (!peca1_coletada && jogador_linha == peca1_linha && jogador_coluna == peca1_coluna)
                 {
                     peca1_coletada = true;
                     timer_aviso_pista = 240;
-                    strcpy(texto_pista_atual, "PECA 1: Engrenagem da maquina coletada!");
+                    strcpy(texto_pista_atual, "PECA 1: Engrenagem coletada!");
                 }
 
                 if (!peca2_coletada && jogador_linha == peca2_linha && jogador_coluna == peca2_coluna)
                 {
                     peca2_coletada = true;
                     timer_aviso_pista = 240;
-                    strcpy(texto_pista_atual, "PECA 2: Componente misterioso coletado!");
+                    strcpy(texto_pista_atual, "PECA 2: Componente coletado!");
                 }
             }
 
-            // COLETA DA CHAVE NO MAPA NOTURNO DA DITADURA
+            if (estado_missao == 3 && !farda_coletada)
+            {
+                if (jogador_linha == farda_linha && jogador_coluna == farda_coluna)
+                {
+                    farda_coletada = true;
+                    jogador_fardado = true;
+                    timer_aviso_pista = 240;
+                    strcpy(texto_pista_atual, "DISFARCE OBTIDO: Voce vestiu o uniforme do batalhao!");
+                }
+            }
+
+            if (estado_missao == 3)
+            {
+                for (int i = 0; i < 2; i++)
+                {
+                    if (!pistas[i].coletado && jogador_linha == pistas[i].linha && jogador_coluna == pistas[i].coluna)
+                    {
+                        pistas[i].coletado = true;
+                        timer_aviso_pista = 300;
+                        strcpy(texto_pista_atual, pistas[i].texto_pista);
+                    }
+                }
+            }
+
             if (estado_missao == 3 && !chave_ditadura_coletada)
             {
                 if (jogador_linha == chave_linha && jogador_coluna == chave_coluna)
                 {
                     chave_ditadura_coletada = true;
                     timer_aviso_pista = 240;
-                    strcpy(texto_pista_atual, "CHAVE COLETADA: Voce encontrou a chave dos arquivos secretos!");
+                    strcpy(texto_pista_atual, "CHAVE COLETADA: Arquivos secretos liberados!");
                 }
             }
 
+            if (estado_missao == 8 && !documento_final_coletado)
+            {
+                if (jogador_linha == doc_final_linha && jogador_coluna == doc_final_coluna)
+                {
+                    documento_final_coletado = true;
+                    timer_aviso_pista = 300;
+                    strcpy(texto_pista_atual, "PARABENS! Voce encontrou o documento secreto final!");
+                }
+            }
 
             float dist_npc = sqrt(pow(jogador_x_mundo - mentor.x, 2) + pow(jogador_y_mundo - mentor.y, 2));
             mentor.ativo = (dist_npc < 60.0);
+
+            float term_x = terminal_coluna * TAMANHO_PIXEL;
+            float term_y = terminal_linha * TAMANHO_PIXEL;
+            float dist_term = sqrt(pow(jogador_x_mundo - term_x, 2) + pow(jogador_y_mundo - term_y, 2));
+            terminal_ativo = (dist_term < 60.0);
 
             if (!mentor.ativo && mentor.interagindo && estado_missao != 4 && estado_missao != 5 && estado_missao != 6 && estado_missao != 7)
             {
@@ -291,10 +421,9 @@ int jogo()
                 mentor.indice_fala = 0;
             }
 
-            // LÓGICA DO GUARDA DA DITADURA (SÓ ATIVA NA FASE 3)
+            // Lógica mecânica do guarda
             if (estado_missao == 3)
             {
-
                 float dx = jogador_x_mundo - guarda.x;
                 float dy = jogador_y_mundo - guarda.y;
                 float distancia = sqrt(dx * dx + dy * dy);
@@ -302,7 +431,6 @@ int jogo()
 
                 if (guarda.alerta == 0 && distancia <= guarda.visao && visao_livre)
                 {
-                    // Viu você de relance! Entra em alerta olhando pros lados
                     guarda.alerta = 1;
                     guarda.tempo_suspeito = 0; 
                 }
@@ -310,8 +438,6 @@ int jogo()
                 {
                     if (distancia > guarda.visao || !visao_livre)
                     {
-                        // Você saiu da visão ou se escondeu atrás de uma caixa:
-                        // Ele continua olhando pros lados até completar 2,5 segundos (150 frames) e desiste!
                         guarda.tempo_suspeito++;
                         if (guarda.tempo_suspeito > 150)
                         {
@@ -321,7 +447,6 @@ int jogo()
                     }
                     else
                     {
-                        // Você ficou parado na frente dele sem se esconder: perseguição começa em ~1 segundo
                         guarda.tempo_suspeito += 2;
                         if (guarda.tempo_suspeito > 150) 
                         {
@@ -330,16 +455,24 @@ int jogo()
                     }
                 }
 
-
-                
-                if (guarda.alerta == 2 && distancia < 25.0f)
+                if (guarda.alerta == 2 && distancia < 30.0f)
                 {
-                    jogador_linha = 12;
-                    jogador_coluna = 20;
-                    guarda.x = guarda.origemX;
-                    guarda.y = guarda.origemY;
-                    guarda.alerta = 0;
-                    guarda.tempo_suspeito = 0;
+                    if (jogador_fardado)
+                    {
+                        guarda.x = guarda.origemX;
+                        guarda.y = guarda.origemY;
+                        guarda.alerta = 0;
+                        guarda.tempo_suspeito = 0;
+                    }
+                    else
+                    {
+                        jogador_linha = 9;
+                        jogador_coluna = 1;
+                        guarda.x = guarda.origemX;
+                        guarda.y = guarda.origemY;
+                        guarda.alerta = 0;
+                        guarda.tempo_suspeito = 0;
+                    }
                 }
 
                 if (guarda.alerta == 2)
@@ -402,9 +535,9 @@ int jogo()
 
                             float novo_y = guarda.y + (dy_origem / dist_origem) * velocidade_volta;
                             int coluna_atual = (int)(guarda.x + TAMANHO_PIXEL / 2) / TAMANHO_PIXEL;
-                            int linha_futura = (int)(novo_y + TAMANHO_PIXEL / 2) / TAMANHO_PIXEL;
+                            int linha_futura = (int)(guarda.y + TAMANHO_PIXEL / 2) / TAMANHO_PIXEL;
 
-                            if (coluna_futura >= 0 && coluna_futura < COLUNAS_MAPA && linha_futura >= 0 && linha_futura < LINHAS_MAPA) {
+                            if (coluna_atual >= 0 && coluna_atual < COLUNAS_MAPA && linha_futura >= 0 && linha_futura < LINHAS_MAPA) {
                                 if (mapa[linha_futura][coluna_atual] != 1) guarda.y = novo_y;
                             }
                         }
@@ -416,7 +549,6 @@ int jogo()
         {
             jogando = false;
         }
-        // TRATAMENTO DOS CLIQUES DE TECLADO (DIÁLOGOS E ESCOLHAS)
         else if (event.type == ALLEGRO_EVENT_KEY_DOWN)
         {
             if (event.keyboard.keycode == ALLEGRO_KEY_ESCAPE)
@@ -424,9 +556,111 @@ int jogo()
                 jogando = false;
             }
 
-            if (event.keyboard.keycode == ALLEGRO_KEY_E)
+            if (modo_digitacao)
             {
-                if (mentor.ativo && !mentor.interagindo)
+                if (event.keyboard.keycode == ALLEGRO_KEY_BACKSPACE)
+                {
+                    int len = strlen(buffer_resposta);
+                    if (len > 0) buffer_resposta[len - 1] = '\0';
+                }
+                else if (event.keyboard.keycode == ALLEGRO_KEY_ENTER)
+                {
+                    if (pergunta_ditadura_atual == 0)
+                    {
+                        if (strcmp(buffer_resposta, "1964") == 0)
+                        {
+                            pergunta_ditadura_atual = 1;
+                            strcpy(buffer_resposta, "");
+                        }
+                        else
+                        {
+                            // ERRO NA PERGUNTA 1: Game Over imediato
+                            tela_game_over = true;
+                            timer_game_over = 180;
+                            strcpy(texto_game_over, "GAME OVER: Resposta incorreta! Voce foi descoberto.");
+                        }
+                    }
+                    else if (pergunta_ditadura_atual == 1)
+                    {
+                        if (strcmp(buffer_resposta, "AI-5") == 0 || strcmp(buffer_resposta, "AI5") == 0 || strcmp(buffer_resposta, "ai-5") == 0 || strcmp(buffer_resposta, "ai5") == 0)
+                        {
+                            pergunta_ditadura_atual = 2;
+                            strcpy(buffer_resposta, "");
+                        }
+                        else
+                        {
+                            // ERRO NA PERGUNTA 2: Game Over imediato
+                            tela_game_over = true;
+                            timer_game_over = 180;
+                            strcpy(texto_game_over, "GAME OVER: Resposta incorreta! Voce foi descoberto.");
+                        }
+                    }
+                    else if (pergunta_ditadura_atual == 2)
+                    {
+                        if (strcmp(buffer_resposta, "COMUNISMO") == 0 || strcmp(buffer_resposta, "SUBVERSAO") == 0 || strcmp(buffer_resposta, "comunismo") == 0 || strcmp(buffer_resposta, "subversao") == 0)
+                        {
+                            quiz_ditadura_concluido = true;
+                            modo_digitacao = false;
+                            terminal_interagindo = false;
+                            estado_missao = 8; // Vai para o último mapa de busca do documento final!
+                            jogador_linha = 7;
+                            jogador_coluna = 1;
+                        }
+                        else
+                        {
+                            // ERRO NA PERGUNTA 3: Game Over imediato
+                            tela_game_over = true;
+                            timer_game_over = 180;
+                            strcpy(texto_game_over, "GAME OVER: Resposta incorreta! Voce foi descoberto.");
+                        }
+                    }
+                }
+                else
+                {
+                    char letra = '\0';
+                    if (event.keyboard.keycode >= ALLEGRO_KEY_A && event.keyboard.keycode <= ALLEGRO_KEY_Z)
+                    {
+                        letra = 'A' + (event.keyboard.keycode - ALLEGRO_KEY_A);
+                    }
+                    else if (event.keyboard.keycode >= ALLEGRO_KEY_0 && event.keyboard.keycode <= ALLEGRO_KEY_9)
+                    {
+                        letra = '0' + (event.keyboard.keycode - ALLEGRO_KEY_0);
+                    }
+                    else if (event.keyboard.keycode == ALLEGRO_KEY_MINUS || event.keyboard.keycode == ALLEGRO_KEY_PAD_MINUS)
+                    {
+                        letra = '-';
+                    }
+
+                    if (letra != '\0' && strlen(buffer_resposta) < 50)
+                    {
+                        char temp[2] = {letra, '\0'};
+                        strcat(buffer_resposta, temp);
+                    }
+                }
+            }
+            else if (event.keyboard.keycode == ALLEGRO_KEY_E)
+            {
+                if (estado_missao == 3 && terminal_ativo && !quiz_ditadura_concluido)
+                {
+                    // VERIFICAÇÃO DE UNIFORME NO TERMINAL
+                    if (!jogador_fardado)
+                    {
+                        tela_game_over = true;
+                        timer_game_over = 180;
+                        strcpy(texto_game_over, "GAME OVER: Sem uniforme! Acesso negado, voce foi descoberto.");
+                    }
+                    else
+                    {
+                        modo_digitacao = true;
+                        terminal_interagindo = true;
+                        strcpy(buffer_resposta, "");
+                    }
+                }
+                else if (estado_missao == 3 && terminal_ativo && quiz_ditadura_concluido)
+                {
+                    terminal_interagindo = !terminal_interagindo;
+                }
+                else if (mentor.ativo && !mentor.interagindo)
                 {
                     mentor.interagindo = true;
                     
@@ -462,14 +696,19 @@ int jogo()
                     mentor.indice_fala++;
                     if (mentor.indice_fala > 2)
                     {
+                        memcpy(mapa, mapa_ditadura, sizeof(mapa));
                         estado_missao = 3; 
+                        
+                        jogador_linha = 9;
+                        jogador_coluna = 1;
+                        
                         mentor.interagindo = false;
                         mentor.indice_fala = 0;
                     }
                 }
             }
 
-            if (mentor.interagindo && ((estado_missao == 0 && mentor.indice_fala == 3) || estado_missao == 6))
+            if (mentor.interagindo && !modo_digitacao && ((estado_missao == 0 && mentor.indice_fala == 3) || estado_missao == 6))
             {
                 if (event.keyboard.keycode == ALLEGRO_KEY_1)
                 {
@@ -482,7 +721,6 @@ int jogo()
             }
         }
 
-        // RENDERIZAÇÃO EXECUTADA APENAS QUANDO O TIMER SINALIZA E A FILA ESTÁ VAZIA
         if (redesenhar && al_is_event_queue_empty(eventos))
         {
             redesenhar = false;
@@ -490,11 +728,35 @@ int jogo()
             int jogador_x_mundo = jogador_coluna * TAMANHO_PIXEL;
             int jogador_y_mundo = jogador_linha * TAMANHO_PIXEL;
 
+            float zoom = 2.0f; 
+            float largura_visivel = LARGURA_TELA / zoom;
+            float altura_visivel = ALTURA_TELA / zoom;
+
+            int largura_atual_pixels = (estado_missao == 8) ? (COLUNAS_MAPA * TAMANHO_PIXEL) : MAPA_LARGURA_PIXELS;
+            int altura_atual_pixels = (estado_missao == 8) ? (9 * TAMANHO_PIXEL) : MAPA_ALTURA_PIXELS;
+
+            float camera_x = (jogador_x_mundo + TAMANHO_PIXEL / 2.0f) - (largura_visivel / 2.0f);
+            float camera_y = (jogador_y_mundo + TAMANHO_PIXEL / 2.0f) - (altura_visivel / 2.0f);
+
+            if (camera_x < 0) camera_x = 0;
+            if (camera_y < 0) camera_y = 0;
+            if (camera_x > largura_atual_pixels - largura_visivel) camera_x = largura_atual_pixels - largura_visivel;
+            if (camera_y > altura_atual_pixels - altura_visivel) camera_y = altura_atual_pixels - altura_visivel;
+
             al_clear_to_color(al_map_rgb(0, 0, 0));
 
+            ALLEGRO_TRANSFORM camera;
+            al_identity_transform(&camera);
+            al_translate_transform(&camera, -camera_x, -camera_y);
+            al_scale_transform(&camera, zoom, zoom);
+            al_use_transform(&camera);
 
-
-            if (estado_missao == 3 && mapa_noite != NULL)
+            if (estado_missao == 8)
+            {
+                // Desenha o fundo do mapa final (cor escura de base secreta)
+                al_draw_filled_rectangle(0, 0, largura_atual_pixels, altura_atual_pixels, al_map_rgb(25, 25, 35));
+            }
+            else if (estado_missao == 3 && mapa_noite != NULL)
             {
                 al_draw_bitmap(mapa_noite, 0, 0, 0);
             }
@@ -503,14 +765,46 @@ int jogo()
                 al_draw_bitmap(mapa_fundo, 0, 0, 0);
             }
 
-            // Desenha o sprite da chave (KEY.png) no mapa noturno da Ditadura
+            if (estado_missao == 8 && !documento_final_coletado)
+            {
+                // Desenha o documento final no mapa 8
+                al_draw_filled_rectangle(doc_final_coluna * TAMANHO_PIXEL + 5, doc_final_linha * TAMANHO_PIXEL + 5,
+                                           (doc_final_coluna + 1) * TAMANHO_PIXEL - 5, (doc_final_linha + 1) * TAMANHO_PIXEL - 5, al_map_rgb(255, 215, 0));
+            }
+
             if (estado_missao == 3 && !chave_ditadura_coletada)
             {
                 sprites_desenhar_chave(chave_coluna * TAMANHO_PIXEL, chave_linha * TAMANHO_PIXEL);
             }
 
+            if (estado_missao == 3 && !farda_coletada)
+            {
+                al_draw_filled_rectangle(farda_coluna * TAMANHO_PIXEL + 10, farda_linha * TAMANHO_PIXEL + 10, 
+                                           (farda_coluna + 1) * TAMANHO_PIXEL - 10, (farda_linha + 1) * TAMANHO_PIXEL - 10, al_map_rgb(100, 150, 255));
+                
+                float dist_farda = sqrt(pow(jogador_x_mundo - (farda_coluna * TAMANHO_PIXEL), 2) + pow(jogador_y_mundo - (farda_linha * TAMANHO_PIXEL), 2));
+                if (dist_farda < 50.0f) {
+                    al_draw_text(fonte_dialogo, al_map_rgb(255, 255, 255), farda_coluna * TAMANHO_PIXEL, farda_linha * TAMANHO_PIXEL - 25, 0, "[E] Vestir Farda");
+                }
+            }
 
-            if (estado_missao != 3)
+            if (estado_missao == 3)
+            {
+                for (int i = 0; i < 2; i++)
+                {
+                    if (!pistas[i].coletado)
+                    {
+                        al_draw_filled_circle(pistas[i].coluna * TAMANHO_PIXEL + 20, pistas[i].linha * TAMANHO_PIXEL + 20, 10, al_map_rgb(255, 215, 0));
+                        float dist_pista = sqrt(pow(jogador_x_mundo - (pistas[i].coluna * TAMANHO_PIXEL), 2) + pow(jogador_y_mundo - (pistas[i].linha * TAMANHO_PIXEL), 2));
+                        if (dist_pista < 50.0f)
+                        {
+                            al_draw_text(fonte_dialogo, al_map_rgb(255, 255, 255), pistas[i].coluna * TAMANHO_PIXEL - 15, pistas[i].linha * TAMANHO_PIXEL - 25, 0, "[E] Ler Pista");
+                        }
+                    }
+                }
+            }
+
+            if (estado_missao != 3 && estado_missao != 8)
             {
                 for (int i = 0; i < 2; i++)
                 {
@@ -518,7 +812,7 @@ int jogo()
                 }
             }
 
-            if (itens_visiveis)
+            if (itens_visiveis && estado_missao != 3 && estado_missao != 8)
             {
                 if (!peca1_coletada)
                 {
@@ -532,26 +826,74 @@ int jogo()
 
             guarda_virado_esquerda = (jogador_x_mundo < guarda.x);
             sprites_desenhar_jogador(jogador_x_mundo, jogador_y_mundo, jogador_virado_esquerda);
-            
-
 
             if (estado_missao == 3)
             {
-             float diff_x = jogador_x_mundo - guarda.x;
-             float diff_y = jogador_y_mundo - guarda.y;
-             guarda_andando = (guarda.alerta == 2 || guarda.alerta == 3);
+                float diff_x = jogador_x_mundo - guarda.x;
+                float diff_y = jogador_y_mundo - guarda.y;
+                guarda_andando = (guarda.alerta == 2 || guarda.alerta == 3);
 
-             if (fabs(diff_x) > fabs(diff_y))
-                 guarda_direcao = (diff_x < 0) ? DIR_ESQUERDA : DIR_DIREITA;
-             else
-                 guarda_direcao = (diff_y < 0) ? DIR_COSTAS : DIR_FRENTE;
+                if (fabs(diff_x) > fabs(diff_y))
+                    guarda_direcao = (diff_x < 0) ? DIR_ESQUERDA : DIR_DIREITA;
+                else
+                    guarda_direcao = (diff_y < 0) ? DIR_COSTAS : DIR_FRENTE;
 
-             sprites_desenhar_guarda_animado(guarda.x, guarda.y, guarda_direcao, guarda_andando, guarda.alerta);
+                sprites_desenhar_guarda_animado(guarda.x, guarda.y, guarda_direcao, guarda_andando, guarda.alerta);
+
+                if (guarda.alerta == 1)
+                {
+                    float centro_x = guarda.x + (TAMANHO_PIXEL / 2.0f);
+                    float topo_y = guarda.y - 32.0f;
+                    al_draw_filled_rectangle(centro_x - 4, topo_y, centro_x + 4, topo_y + 22, al_map_rgb(255, 255, 0));
+                    al_draw_filled_rectangle(centro_x - 4, topo_y + 26, centro_x + 4, topo_y + 34, al_map_rgb(255, 255, 0));
+                }
             }
 
+            if (estado_missao != 3 && estado_missao != 8)
+            {
+                int mentor_direcao = DIR_FRENTE;
+                if (mentor.ativo)
+                {
+                    float diff_mx = jogador_x_mundo - mentor.x;
+                    float diff_my = jogador_y_mundo - mentor.y;
+                    if (fabs(diff_mx) > fabs(diff_my))
+                        mentor_direcao = (diff_mx < 0) ? DIR_ESQUERDA : DIR_DIREITA;
+                    else
+                        mentor_direcao = (diff_my < 0) ? DIR_COSTAS : DIR_FRENTE;
+                }
+                sprites_desenhar_mentor_animado(mentor.x, mentor.y, mentor_direcao, false);
 
+                if (mentor.ativo && !mentor.interagindo)
+                {
+                    al_draw_filled_circle(mentor.x + 20, mentor.y - 15, 14, al_map_rgb(240, 240, 240));
+                    al_draw_text(fonte_dialogo, al_map_rgb(20, 20, 20), mentor.x + 13, mentor.y - 27, 0, "E");
+                }
+            }
+            else if (estado_missao == 3)
+            {
+                float tx = terminal_coluna * TAMANHO_PIXEL;
+                float ty = terminal_linha * TAMANHO_PIXEL;
+                if (terminal_ativo)
+                {
+                    al_draw_filled_circle(tx + 20, ty - 15, 14, al_map_rgb(240, 240, 240));
+                    al_draw_text(fonte_dialogo, al_map_rgb(20, 20, 20), tx + 13, ty - 27, 0, "E");
+                }
+            }
 
-            if (itens_visiveis)
+            ALLEGRO_TRANSFORM padrao;
+            al_identity_transform(&padrao);
+            al_use_transform(&padrao);
+
+            // TELA DE GAME OVER (TELA PRETA COM MENSAGEM)
+            if (tela_game_over)
+            {
+                al_draw_filled_rectangle(0, 0, LARGURA_TELA, ALTURA_TELA, al_map_rgb(0, 0, 0));
+                al_draw_text(fonte_dialogo, al_map_rgb(255, 50, 50), LARGURA_TELA / 2 - 250, ALTURA_TELA / 2 - 20, 0, texto_game_over);
+                al_flip_display();
+                continue;
+            }
+
+            if (itens_visiveis && estado_missao != 3 && estado_missao != 8)
             {
                 int total_pecas = (peca1_coletada ? 1 : 0) + (peca2_coletada ? 1 : 0);
                 char hud_pecas[50];
@@ -569,41 +911,7 @@ int jogo()
                 al_draw_text(fonte_dialogo, al_map_rgb(255, 230, 120), 175, 95, 0, texto_pista_atual);
             }
 
-            if (estado_missao == 3 && guarda.alerta == 1)
-            {
-                float centro_x = guarda.x + (TAMANHO_PIXEL / 2.0f);
-                float topo_y = guarda.y - 32.0f;
-                al_draw_filled_rectangle(centro_x - 4, topo_y, centro_x + 4, topo_y + 22, al_map_rgb(255, 255, 0));
-                al_draw_filled_rectangle(centro_x - 4, topo_y + 26, centro_x + 4, topo_y + 34, al_map_rgb(255, 255, 0));
-            }
-
-            
-
-                     if (estado_missao != 3)
-         {
-             int mentor_direcao = DIR_FRENTE;
-             if (mentor.ativo)
-             {
-                 float diff_mx = jogador_x_mundo - mentor.x;
-                 float diff_my = jogador_y_mundo - mentor.y;
-                 if (fabs(diff_mx) > fabs(diff_my))
-                     mentor_direcao = (diff_mx < 0) ? DIR_ESQUERDA : DIR_DIREITA;
-                 else
-                     mentor_direcao = (diff_my < 0) ? DIR_COSTAS : DIR_FRENTE;
-             }
-             sprites_desenhar_mentor_animado(mentor.x, mentor.y, mentor_direcao, false);
-         }
-
-
-
-
-            if (mentor.ativo && !mentor.interagindo && estado_missao != 3)
-            {
-                al_draw_filled_circle(mentor.x + 20, mentor.y - 15, 14, al_map_rgb(240, 240, 240));
-                al_draw_text(fonte_dialogo, al_map_rgb(20, 20, 20), mentor.x + 13, mentor.y - 27, 0, "E");
-            }
-
-            if (mentor.interagindo)
+            if (mentor.interagindo || terminal_interagindo)
             {
                 al_draw_filled_rectangle(150, ALTURA_TELA - 170, LARGURA_TELA - 150, ALTURA_TELA - 40, al_map_rgb(15, 15, 15));
                 al_draw_rectangle(150, ALTURA_TELA - 170, LARGURA_TELA - 150, ALTURA_TELA - 40, al_map_rgb(200, 200, 200), 2.0);
@@ -622,17 +930,28 @@ int jogo()
                         al_draw_text(fonte_dialogo, al_map_rgb(220, 200, 80), LARGURA_TELA - 450, ALTURA_TELA - 75, 0, "[Pressione E para continuar]");
                     }
                 }
-                else if (estado_missao == 2)
-                {
-                    if (!peca1_coletada || !peca2_coletada)
-                    {
-                        al_draw_text(fonte_dialogo, al_map_rgb(255, 255, 255), 180, ALTURA_TELA - 110, 0, "Ainda faltam pecas da maquina na praça! Continue procurando.");
-                        al_draw_text(fonte_dialogo, al_map_rgb(220, 200, 80), LARGURA_TELA - 450, ALTURA_TELA - 75, 0, "[Pressione E para fechar]");
-                    }
-                }
                 else if (estado_missao == 3)
                 {
-                    al_draw_text(fonte_dialogo, al_map_rgb(255, 100, 100), 180, ALTURA_TELA - 110, 0, "[VIAGEM CONCLUÍDA] Bem-vindo a Ditadura Militar! Cuidado com os guardas!");
+                    if (modo_digitacao)
+                    {
+                        if (pergunta_ditadura_atual == 0)
+                        {
+                            al_draw_text(fonte_dialogo, al_map_rgb(255, 255, 255), 180, ALTURA_TELA - 145, 0, "Pergunta 1: Em que ano comecou o regime militar no Brasil?");
+                        }
+                        else if (pergunta_ditadura_atual == 1)
+                        {
+                            al_draw_text(fonte_dialogo, al_map_rgb(255, 255, 255), 180, ALTURA_TELA - 145, 0, "Pergunta 2: Qual Ato Institucional cassou mandatos?");
+                        }
+                        else if (pergunta_ditadura_atual == 2)
+                        {
+                            al_draw_text(fonte_dialogo, al_map_rgb(255, 255, 255), 180, ALTURA_TELA - 145, 0, "Pergunta 3: Qual era a justificativa oficial do regime?");
+                        }
+
+                        char display_digito[100];
+                        sprintf(display_digito, "Sua resposta: %s_", buffer_resposta);
+                        al_draw_text(fonte_dialogo, al_map_rgb(0, 255, 255), 180, ALTURA_TELA - 105, 0, display_digito);
+                        al_draw_text(fonte_dialogo, al_map_rgb(200, 200, 200), 180, ALTURA_TELA - 65, 0, "[Digite e pressione ENTER para confirmar]");
+                    }
                 }
                 else if (estado_missao == 4)
                 {
@@ -676,10 +995,9 @@ int jogo()
         al_destroy_bitmap(mapa_fundo);
     }
 
-      if (mapa_noite) {
+    if (mapa_noite) {
         al_destroy_bitmap(mapa_noite);
     }
-
     
     if (fonte_dialogo) {
         al_destroy_font(fonte_dialogo);

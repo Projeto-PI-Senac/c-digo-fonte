@@ -49,8 +49,6 @@ static void carregar_sequencia(ALLEGRO_BITMAP **lista, int qtd, const char *padr
     }
 }
 
-
-
 static void destruir_sequencia(ALLEGRO_BITMAP **lista, int qtd)
 {
     for (int i = 0; i < qtd; i++)
@@ -71,7 +69,6 @@ void sprites_inicializar(void)
 
     personagem = al_load_bitmap("Sprites/Protagonista/ParadoDeFrente/parado_0.png");
     if (!personagem) personagem = al_load_bitmap("Sprites/personagem.png");
-
 
     guarda_fallback = al_load_bitmap("Sprites/guarda.png");
 
@@ -173,15 +170,10 @@ void sprites_desenhar_guarda_animado(float x, float y, int direcao, bool andando
         else                              frame_atual = guarda_parado_frente[passo_anim % 5];
     }
 
-
     if (frame_atual == NULL) frame_atual = guarda_parado_frente[0];
+    if (frame_atual == NULL) frame_atual = guarda_fallback;
 
-    if (frame_atual == NULL)
-    {
-        frame_atual = guarda_fallback;
-    }
-
-    float tamanho_visual = 48.0f;
+    float tamanho_visual = 100.0f; // Mantido no tamanho ideal que você curtiu
     float offset = (TAMANHO_SPRITE - tamanho_visual) / 2.0f;
     sprites_desenhar_tamanho(frame_atual, x + offset, y + offset, tamanho_visual, tamanho_visual, false, al_map_rgb(200, 40, 40));
 }
@@ -213,22 +205,17 @@ void sprites_desenhar_mentor_animado(float x, float y, int direcao, bool andando
         else                              frame_atual = mentor_parado_frente[passo_anim % 5];
     }
 
-
     if (frame_atual == NULL) frame_atual = mentor_parado_frente[0];
+    if (frame_atual == NULL) frame_atual = npc_fallback;
 
-    if (frame_atual == NULL)
-    {
-        frame_atual = npc_fallback;
-    }
-
-    float tamanho_visual = 48.0f;
+    float tamanho_visual = 100.0f; // Mantido no tamanho ideal que você curtiu
     float offset = (TAMANHO_SPRITE - tamanho_visual) / 2.0f;
     sprites_desenhar_tamanho(frame_atual, x + offset, y + offset, tamanho_visual, tamanho_visual, false, al_map_rgb(220, 180, 40));
 }
 
 void sprites_desenhar_chave(float x, float y)
 {
-    float tamanho_chave = 24.0f;
+    float tamanho_chave = 50.0f;
     float offset = (TAMANHO_SPRITE - tamanho_chave) / 2.0f;
     sprites_desenhar_tamanho(chave, x + offset, y + offset, tamanho_chave, tamanho_chave, false, al_map_rgb(255, 215, 0));
 }
