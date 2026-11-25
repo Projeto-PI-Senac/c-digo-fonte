@@ -118,6 +118,10 @@ int jogo()
 
     bool jogador_virado_esquerda = false;
     bool guarda_virado_esquerda = false;
+
+     int jogador_direcao = DIR_FRENTE;
+    int timer_andar_jogador = 0;
+
     int guarda_direcao = DIR_FRENTE;
     bool guarda_andando = false;
 
@@ -319,10 +323,12 @@ int jogo()
                     int coluna = jogador_coluna;
                     bool moveu = false;
 
-                    if (al_key_down(&key_state, ALLEGRO_KEY_UP)) { linha--; moveu = true; }
-                    else if (al_key_down(&key_state, ALLEGRO_KEY_DOWN)) { linha++; moveu = true; }
-                    else if (al_key_down(&key_state, ALLEGRO_KEY_LEFT)) { coluna--; moveu = true; jogador_virado_esquerda = true; }
-                    else if (al_key_down(&key_state, ALLEGRO_KEY_RIGHT)) { coluna++; moveu = true; jogador_virado_esquerda = false; }
+                                        if (al_key_down(&key_state, ALLEGRO_KEY_UP)) { linha--; moveu = true; jogador_direcao = DIR_COSTAS; timer_andar_jogador = 15; }
+                    else if (al_key_down(&key_state, ALLEGRO_KEY_DOWN)) { linha++; moveu = true; jogador_direcao = DIR_FRENTE; timer_andar_jogador = 15; }
+                    else if (al_key_down(&key_state, ALLEGRO_KEY_LEFT)) { coluna--; moveu = true; jogador_virado_esquerda = true; jogador_direcao = DIR_ESQUERDA; timer_andar_jogador = 15; }
+                    else if (al_key_down(&key_state, ALLEGRO_KEY_RIGHT)) { coluna++; moveu = true; jogador_virado_esquerda = false; jogador_direcao = DIR_DIREITA; timer_andar_jogador = 15; }
+
+                    if (timer_andar_jogador > 0) timer_andar_jogador--;
 
                     int linhas_atual_mapa = (estado_missao == 8) ? 9 : LINHAS_MAPA;
                     int colunas_atual_mapa = (estado_missao == 8) ? COLUNAS_MAPA : COLUNAS_MAPA;
@@ -825,7 +831,8 @@ int jogo()
             }
 
             guarda_virado_esquerda = (jogador_x_mundo < guarda.x);
-            sprites_desenhar_jogador(jogador_x_mundo, jogador_y_mundo, jogador_virado_esquerda);
+            sprites_desenhar_jogador_animado(jogador_x_mundo, jogador_y_mundo, jogador_direcao, (timer_andar_jogador > 0), jogador_fardado);
+
 
             if (estado_missao == 3)
             {

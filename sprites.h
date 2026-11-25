@@ -18,6 +18,7 @@ void sprites_desenhar_tamanho(ALLEGRO_BITMAP *imagem, float x, float y, float la
 
 // Desenho dos personagens e objetos
 void sprites_desenhar_jogador(float x, float y, bool virado_esquerda);
+void sprites_desenhar_jogador_animado(float x, float y, int direcao, bool andando, bool fardado);
 void sprites_desenhar_guarda(float x, float y, bool virado_esquerda);
 void sprites_desenhar_guarda_animado(float x, float y, int direcao, bool andando, int alerta);
 void sprites_desenhar_npc(float x, float y);
