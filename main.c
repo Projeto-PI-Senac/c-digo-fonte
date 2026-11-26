@@ -1,12 +1,13 @@
+#define _CRT_SECURE_NO_WARNINGS 1
 #include <stdio.h>                       
 #include <stdbool.h>                     
 #include <allegro5/allegro.h>            
 #include <allegro5/allegro_primitives.h> 
 #include <allegro5/allegro_font.h>       
 #include <allegro5/allegro_ttf.h>        
-#include <allegro5/allegro_image.h>      
+#include <allegro5/allegro_image.h>   
 
-bool jogo();
+int jogo();
 
 int main()
 {
@@ -28,12 +29,17 @@ int main()
 
     int estado_menu = 0;
 
-    al_set_new_display_flags(ALLEGRO_WINDOWED | ALLEGRO_PROGRAMMABLE_PIPELINE);
+    al_set_new_display_flags(ALLEGRO_WINDOWED); /* PROGRAMMABLE_PIPELINE exige D3DX9 no Windows e fazia o display falhar */
 
-    ALLEGRO_DISPLAY *janela = al_create_display(1280, 960);     
-    ALLEGRO_FONT *fonte = al_load_ttf_font("Arial.ttf", 50, 0); 
-    ALLEGRO_BITMAP *background = al_load_bitmap("fundo.png");   
-    ALLEGRO_TIMER *timer = al_create_timer(1.0 / 60.0);         
+    ALLEGRO_DISPLAY* janela = al_create_display(1280, 960);
+    if (!janela)
+    {
+        printf("Erro critico: nao foi possivel criar a janela!\n");
+        return -1;
+    }
+    ALLEGRO_FONT* fonte = al_load_ttf_font("Arial.ttf", 50, 0);
+    ALLEGRO_BITMAP* background = al_load_bitmap("fundo.png");
+    ALLEGRO_TIMER* timer = al_create_timer(1.0 / 60.0);
 
     if (!fonte)
     {
@@ -46,7 +52,7 @@ int main()
         printf("Aviso: 'fundo.png' nao encontrado na raiz. O menu rodara com fundo preto.\n");
     }
 
-    ALLEGRO_EVENT_QUEUE *event_queue = al_create_event_queue();
+    ALLEGRO_EVENT_QUEUE* event_queue = al_create_event_queue();
     al_register_event_source(event_queue, al_get_mouse_event_source());
     al_register_event_source(event_queue, al_get_display_event_source(janela));
     al_register_event_source(event_queue, al_get_timer_event_source(timer));
@@ -87,6 +93,7 @@ int main()
                     jogo();
 
                     janela = al_create_display(1280, 960);
+                    if (!janela) return -1;
                     fonte = al_load_ttf_font("Arial.ttf", 50, 0);
                     background = al_load_bitmap("fundo.png");
                     timer = al_create_timer(1.0 / 60.0);

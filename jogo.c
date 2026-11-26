@@ -1,3 +1,4 @@
+#define _CRT_SECURE_NO_WARNINGS 1
 #include <stdio.h>                       // guia de linguagem C
 #include <stdbool.h>                     // adicionar o bool
 #include <string.h>                      // manipulação de strings (strlen, strcpy)
@@ -8,6 +9,7 @@
 #include <allegro5/allegro_image.h>      // carregar imagens
 #include <math.h>
 #include "sprites.h"
+
 
 #define LARGURA_TELA 1600
 #define ALTURA_TELA 1000
@@ -25,16 +27,16 @@ typedef struct
     float velocidade;
     int alerta;          // 0 = Normal/Parado, 1 = Desconfiado, 2 = Perseguindo, 3 = Voltando
     float visao;
-    int tempo_suspeito;  
+    int tempo_suspeito;
 } Inimigo;
 
 typedef struct
 {
-    int linha, coluna; 
+    int linha, coluna;
     float x, y;
     bool ativo;
-    char falas[4][220]; 
-    int indice_fala;    
+    char falas[4][220];
+    int indice_fala;
     bool interagindo;
 } NPC;
 
@@ -66,7 +68,7 @@ bool guarda_tem_visao_livre(int mapa[LINHAS_MAPA][COLUNAS_MAPA], float x_guarda,
         {
             if (mapa[lin][col] == 1)
             {
-                return false; 
+                return false;
             }
         }
     }
@@ -84,27 +86,33 @@ int jogo()
 
     al_set_new_display_option(ALLEGRO_VSYNC, 2, ALLEGRO_SUGGEST);
 
-    ALLEGRO_DISPLAY *janela = al_create_display(LARGURA_TELA, ALTURA_TELA);
+    ALLEGRO_DISPLAY* janela = al_create_display(LARGURA_TELA, ALTURA_TELA);
+    if (!janela)
+    {
+        printf("Erro critico: nao foi possivel criar a janela do jogo!\n");
+        return -1;
+    }
 
     sprites_inicializar();
 
-    ALLEGRO_FONT *fonte_dialogo = al_load_ttf_font("arial.ttf", 22, 0);
+    ALLEGRO_FONT* fonte_dialogo = al_load_ttf_font("Arial.ttf", 22, 0);
+    if (!fonte_dialogo) fonte_dialogo = al_load_ttf_font("arial.ttf", 22, 0);
     if (!fonte_dialogo) {
-        fonte_dialogo = al_create_builtin_font(); 
+        fonte_dialogo = al_create_builtin_font();
     }
 
-    ALLEGRO_BITMAP *mapa_fundo = al_load_bitmap("mapa.png");
+    ALLEGRO_BITMAP* mapa_fundo = al_load_bitmap("mapa.png");
     if (!mapa_fundo) {
         mapa_fundo = al_load_bitmap("Sprites/mapa.png");
     }
 
-    ALLEGRO_BITMAP *mapa_noite = al_load_bitmap("Sprites/Mapa A Noite.png");
+    ALLEGRO_BITMAP* mapa_noite = al_load_bitmap("Sprites/Mapa A Noite.png");
     if (!mapa_noite) {
         mapa_noite = al_load_bitmap("./Sprites/Mapa A Noite.png");
     }
 
-    ALLEGRO_TIMER *timer = al_create_timer(1.0 / 60.0);
-    ALLEGRO_EVENT_QUEUE *eventos = al_create_event_queue();
+    ALLEGRO_TIMER* timer = al_create_timer(1.0 / 60.0);
+    ALLEGRO_EVENT_QUEUE* eventos = al_create_event_queue();
 
     al_register_event_source(eventos, al_get_keyboard_event_source());
     al_register_event_source(eventos, al_get_display_event_source(janela));
@@ -113,21 +121,21 @@ int jogo()
 
     al_start_timer(timer);
 
-    int jogador_linha = 12; 
+    int jogador_linha = 12;
     int jogador_coluna = 20;
 
     bool jogador_virado_esquerda = false;
     bool guarda_virado_esquerda = false;
 
-     int jogador_direcao = DIR_FRENTE;
+    int jogador_direcao = DIR_FRENTE;
     int timer_andar_jogador = 0;
 
     int guarda_direcao = DIR_FRENTE;
     bool guarda_andando = false;
 
-    int estado_missao = 0; 
+    int estado_missao = 0;
     bool itens_visiveis = false;
-    bool jogador_fardado = false; 
+    bool jogador_fardado = false;
 
     bool peca1_coletada = false;
     int peca1_linha = 7, peca1_coluna = 4;
@@ -153,7 +161,7 @@ int jogo()
 
     bool modo_digitacao = false;
     char buffer_resposta[64] = "";
-    int pergunta_ditadura_atual = 0; 
+    int pergunta_ditadura_atual = 0;
     bool quiz_ditadura_concluido = false;
     bool terminal_interagindo = false;
 
@@ -163,33 +171,33 @@ int jogo()
     int timer_game_over = 0;
 
     int mapa[LINHAS_MAPA][COLUNAS_MAPA] = {
-        {  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
-        {  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
-        {  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
-        {  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
-        {  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
-        {  1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1 },
-        {  1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1 },
-        {  1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
-        {  1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
-        {  1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
-        {  1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1 },
-        {  1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1 },
-        {  1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1 },
-        {  1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1 },
-        {  1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
-        {  1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1 },
-        {  1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
-        {  1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
-        {  1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
-        {  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
-        {  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
-        {  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
-        {  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
-        {  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
-        {  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 }
+        { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+        { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+        { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+        { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+        { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1 },
+        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1 },
+        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+        { 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+        { 1, 0, 0, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1 },
+        { 1, 0, 0, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1 },
+        { 1, 0, 0, 0, 1, 0, 0, 1, 1, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1 },
+        { 1, 0, 0, 0, 1, 0, 0, 1, 1, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1 },
+        { 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+        { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+        { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+        { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+        { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+        { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+        { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+        { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 }
     };
-
+    
     int mapa_ditadura[LINHAS_MAPA][COLUNAS_MAPA] = {
         { 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1 },
         { 1,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,1 },
@@ -270,13 +278,13 @@ int jogo()
     figurantes[0].coluna = 12;
     figurantes[0].x = figurantes[0].coluna * TAMANHO_PIXEL;
     figurantes[0].y = figurantes[0].linha * TAMANHO_PIXEL;
-    mapa[figurantes[0].linha][figurantes[0].coluna] = 1; 
+    mapa[figurantes[0].linha][figurantes[0].coluna] = 1;
 
     figurantes[1].linha = 16;
     figurantes[1].coluna = 15;
     figurantes[1].x = figurantes[1].coluna * TAMANHO_PIXEL;
     figurantes[1].y = figurantes[1].linha * TAMANHO_PIXEL;
-    mapa[figurantes[1].linha][figurantes[1].coluna] = 1; 
+    mapa[figurantes[1].linha][figurantes[1].coluna] = 1;
 
     strcpy(mentor.falas[0], "Ola, jovem! Que bom te ver por aqui nesta praça.");
     strcpy(mentor.falas[1], "Estive planejando uma maquina revolucionaria ultimamente...");
@@ -323,7 +331,7 @@ int jogo()
                     int coluna = jogador_coluna;
                     bool moveu = false;
 
-                                        if (al_key_down(&key_state, ALLEGRO_KEY_UP)) { linha--; moveu = true; jogador_direcao = DIR_COSTAS; timer_andar_jogador = 15; }
+                    if (al_key_down(&key_state, ALLEGRO_KEY_UP)) { linha--; moveu = true; jogador_direcao = DIR_COSTAS; timer_andar_jogador = 15; }
                     else if (al_key_down(&key_state, ALLEGRO_KEY_DOWN)) { linha++; moveu = true; jogador_direcao = DIR_FRENTE; timer_andar_jogador = 15; }
                     else if (al_key_down(&key_state, ALLEGRO_KEY_LEFT)) { coluna--; moveu = true; jogador_virado_esquerda = true; jogador_direcao = DIR_ESQUERDA; timer_andar_jogador = 15; }
                     else if (al_key_down(&key_state, ALLEGRO_KEY_RIGHT)) { coluna++; moveu = true; jogador_virado_esquerda = false; jogador_direcao = DIR_DIREITA; timer_andar_jogador = 15; }
@@ -438,7 +446,7 @@ int jogo()
                 if (guarda.alerta == 0 && distancia <= guarda.visao && visao_livre)
                 {
                     guarda.alerta = 1;
-                    guarda.tempo_suspeito = 0; 
+                    guarda.tempo_suspeito = 0;
                 }
                 else if (guarda.alerta == 1)
                 {
@@ -454,9 +462,9 @@ int jogo()
                     else
                     {
                         guarda.tempo_suspeito += 2;
-                        if (guarda.tempo_suspeito > 150) 
+                        if (guarda.tempo_suspeito > 150)
                         {
-                            guarda.alerta = 2; 
+                            guarda.alerta = 2;
                         }
                     }
                 }
@@ -639,7 +647,7 @@ int jogo()
 
                     if (letra != '\0' && strlen(buffer_resposta) < 50)
                     {
-                        char temp[2] = {letra, '\0'};
+                        char temp[2] = { letra, '\0' };
                         strcat(buffer_resposta, temp);
                     }
                 }
@@ -669,10 +677,10 @@ int jogo()
                 else if (mentor.ativo && !mentor.interagindo)
                 {
                     mentor.interagindo = true;
-                    
+
                     if (estado_missao == 2 && peca1_coletada && peca2_coletada)
                     {
-                        estado_missao = 7; 
+                        estado_missao = 7;
                         mentor.indice_fala = 0;
                     }
                 }
@@ -681,21 +689,21 @@ int jogo()
                     mentor.indice_fala++;
                     if (mentor.indice_fala > 2)
                     {
-                        mentor.indice_fala = 3; 
+                        mentor.indice_fala = 3;
                     }
                 }
                 else if (mentor.interagindo && estado_missao == 4)
                 {
                     mentor.interagindo = false;
                     mentor.indice_fala = 0;
-                    estado_missao = 6; 
+                    estado_missao = 6;
                 }
                 else if (mentor.interagindo && estado_missao == 5)
                 {
                     mentor.interagindo = false;
                     mentor.indice_fala = 0;
-                    estado_missao = 2;       
-                    itens_visiveis = true;   
+                    estado_missao = 2;
+                    itens_visiveis = true;
                 }
                 else if (mentor.interagindo && estado_missao == 7)
                 {
@@ -703,11 +711,11 @@ int jogo()
                     if (mentor.indice_fala > 2)
                     {
                         memcpy(mapa, mapa_ditadura, sizeof(mapa));
-                        estado_missao = 3; 
-                        
+                        estado_missao = 3;
+
                         jogador_linha = 9;
                         jogador_coluna = 1;
-                        
+
                         mentor.interagindo = false;
                         mentor.indice_fala = 0;
                     }
@@ -718,11 +726,11 @@ int jogo()
             {
                 if (event.keyboard.keycode == ALLEGRO_KEY_1)
                 {
-                    estado_missao = 5; 
+                    estado_missao = 5;
                 }
                 else if (event.keyboard.keycode == ALLEGRO_KEY_2)
                 {
-                    estado_missao = 4; 
+                    estado_missao = 4;
                 }
             }
         }
@@ -734,7 +742,7 @@ int jogo()
             int jogador_x_mundo = jogador_coluna * TAMANHO_PIXEL;
             int jogador_y_mundo = jogador_linha * TAMANHO_PIXEL;
 
-            float zoom = 2.0f; 
+            float zoom = 2.0f;
             float largura_visivel = LARGURA_TELA / zoom;
             float altura_visivel = ALTURA_TELA / zoom;
 
@@ -775,7 +783,7 @@ int jogo()
             {
                 // Desenha o documento final no mapa 8
                 al_draw_filled_rectangle(doc_final_coluna * TAMANHO_PIXEL + 5, doc_final_linha * TAMANHO_PIXEL + 5,
-                                           (doc_final_coluna + 1) * TAMANHO_PIXEL - 5, (doc_final_linha + 1) * TAMANHO_PIXEL - 5, al_map_rgb(255, 215, 0));
+                    (doc_final_coluna + 1) * TAMANHO_PIXEL - 5, (doc_final_linha + 1) * TAMANHO_PIXEL - 5, al_map_rgb(255, 215, 0));
             }
 
             if (estado_missao == 3 && !chave_ditadura_coletada)
@@ -785,9 +793,9 @@ int jogo()
 
             if (estado_missao == 3 && !farda_coletada)
             {
-                al_draw_filled_rectangle(farda_coluna * TAMANHO_PIXEL + 10, farda_linha * TAMANHO_PIXEL + 10, 
-                                           (farda_coluna + 1) * TAMANHO_PIXEL - 10, (farda_linha + 1) * TAMANHO_PIXEL - 10, al_map_rgb(100, 150, 255));
-                
+                al_draw_filled_rectangle(farda_coluna * TAMANHO_PIXEL + 10, farda_linha * TAMANHO_PIXEL + 10,
+                    (farda_coluna + 1) * TAMANHO_PIXEL - 10, (farda_linha + 1) * TAMANHO_PIXEL - 10, al_map_rgb(100, 150, 255));
+
                 float dist_farda = sqrt(pow(jogador_x_mundo - (farda_coluna * TAMANHO_PIXEL), 2) + pow(jogador_y_mundo - (farda_linha * TAMANHO_PIXEL), 2));
                 if (dist_farda < 50.0f) {
                     al_draw_text(fonte_dialogo, al_map_rgb(255, 255, 255), farda_coluna * TAMANHO_PIXEL, farda_linha * TAMANHO_PIXEL - 25, 0, "[E] Vestir Farda");
@@ -996,7 +1004,7 @@ int jogo()
 
             al_flip_display();
         }
-    } 
+    }
 
     if (mapa_fundo) {
         al_destroy_bitmap(mapa_fundo);
@@ -1005,7 +1013,7 @@ int jogo()
     if (mapa_noite) {
         al_destroy_bitmap(mapa_noite);
     }
-    
+
     if (fonte_dialogo) {
         al_destroy_font(fonte_dialogo);
     }
