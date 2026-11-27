@@ -123,8 +123,11 @@ void sprites_inicializar(void)
     if (!chave) chave = al_load_bitmap("./Sprites/KEY.png");
     if (!chave) chave = al_load_bitmap("Sprites/chave.png");
 
-    jornal = al_load_bitmap("Sprites/jornal.png");
-    documento = al_load_bitmap("Sprites/documento.png");
+    jornal = al_load_bitmap("Sprites/Peca1.png");
+    if (!jornal) jornal = al_load_bitmap("Sprites/Peça1.png");
+
+    documento = al_load_bitmap("Sprites/Peca2.png");
+    if (!documento) documento = al_load_bitmap("Sprites/Peça2.png");
 
     // Soldado Militar
     carregar_sequencia(guarda_andar_dir, 4, "Sprites/Soldado militar/AndandoPraDireita/AndandoDir_%d.png", 0);
@@ -383,16 +386,18 @@ void sprites_desenhar_chave(float x, float y)
 }
 void sprites_desenhar_jornal(float x, float y)
 {
-    float tamanho_item = 28.0f;
+    float tamanho_item = 48.0f;
     float offset = (TAMANHO_SPRITE - tamanho_item) / 2.0f;
     sprites_desenhar_tamanho(jornal, x + offset, y + offset, tamanho_item, tamanho_item, false, al_map_rgb(235, 235, 235));
 }
+
 void sprites_desenhar_documento(float x, float y)
 {
-    float tamanho_item = 26.0f;
+    float tamanho_item = 48.0f;
     float offset = (TAMANHO_SPRITE - tamanho_item) / 2.0f;
     sprites_desenhar_tamanho(documento, x + offset, y + offset, tamanho_item, tamanho_item, false, al_map_rgb(190, 140, 75));
 }
+
 void sprites_finalizar(void)
 {
     if (personagem) { al_destroy_bitmap(personagem); personagem = NULL; }
