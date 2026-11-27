@@ -59,6 +59,24 @@ static ALLEGRO_BITMAP* jog_mil_parado_tras[MAX_FRAMES] = { NULL };
 static ALLEGRO_BITMAP* jog_mil_parado_dir[MAX_FRAMES] = { NULL };
 static ALLEGRO_BITMAP* jog_mil_parado_esq[MAX_FRAMES] = { NULL };
 
+// Arrays de animação dos Figurantes (0 = Idoso, 1 = Jovem, 2 = Mulher)
+static ALLEGRO_BITMAP *fig_idoso_frente[MAX_FRAMES] = {NULL};
+static ALLEGRO_BITMAP *fig_idoso_costas[MAX_FRAMES] = {NULL};
+static ALLEGRO_BITMAP *fig_idoso_dir[MAX_FRAMES]    = {NULL};
+static ALLEGRO_BITMAP *fig_idoso_esq[MAX_FRAMES]    = {NULL};
+
+static ALLEGRO_BITMAP *fig_jovem_frente[MAX_FRAMES] = {NULL};
+static ALLEGRO_BITMAP *fig_jovem_costas[MAX_FRAMES] = {NULL};
+static ALLEGRO_BITMAP *fig_jovem_dir[MAX_FRAMES]    = {NULL};
+static ALLEGRO_BITMAP *fig_jovem_esq[MAX_FRAMES]    = {NULL};
+
+static ALLEGRO_BITMAP *fig_mulher_frente[MAX_FRAMES] = {NULL};
+static ALLEGRO_BITMAP *fig_mulher_costas[MAX_FRAMES] = {NULL};
+static ALLEGRO_BITMAP *fig_mulher_dir[MAX_FRAMES]    = {NULL};
+static ALLEGRO_BITMAP *fig_mulher_esq[MAX_FRAMES]    = {NULL};
+
+static int contador_anim_figurantes = 0;
+
 static int contador_anim_guarda = 0;
 static int contador_anim_mentor = 0;
 static int contador_anim_jogador = 0;
@@ -148,6 +166,25 @@ void sprites_inicializar(void)
     carregar_sequencia(jog_mil_parado_tras, 5, "Sprites/ProtagonistaMilitar/ParadoDeCostas/Parado_tras_%d.png", 0);
     carregar_sequencia(jog_mil_parado_dir, 2, "Sprites/ProtagonistaMilitar/ParadoPraDireita/ParadoDir_%d.png", 0);
     carregar_sequencia(jog_mil_parado_esq, 2, "Sprites/ProtagonistaMilitar/ParadoPraEsquerda/ParadoEsq_%d.png", 0);
+
+        // Figurante 0: Idoso
+    carregar_sequencia(fig_idoso_frente, 5, "Sprites/FiguranteIdoso/ParadoDeFrente/parado_%d.png", 0);
+    carregar_sequencia(fig_idoso_costas, 5, "Sprites/FiguranteIdoso/ParadoDeCostas/parado_tras_%d.png", 0);
+    carregar_sequencia(fig_idoso_dir,    4, "Sprites/FiguranteIdoso/ParadoPraDireita/ParadoDir_%d.png", 0);
+    carregar_sequencia(fig_idoso_esq,    5, "Sprites/FiguranteIdoso/ParadoPraEsquerda/ParadoEsq_%d.png", 0);
+
+    // Figurante 1: Jovem
+    carregar_sequencia(fig_jovem_frente, 3, "Sprites/FiguranteJovem/ParadoDeFrente/parado_%d.png", 0);
+    carregar_sequencia(fig_jovem_costas, 3, "Sprites/FiguranteJovem/ParadoDeCostas/parado_tras_%d.png", 0);
+    carregar_sequencia(fig_jovem_dir,    2, "Sprites/FiguranteJovem/ParadoPraDireita/ParadoDir_%d.png", 0);
+    carregar_sequencia(fig_jovem_esq,    5, "Sprites/FiguranteJovem/ParadoPraEsquerda/ParadoEsq_%d.png", 0);
+
+    // Figurante 2: Mulher
+    carregar_sequencia(fig_mulher_frente, 4, "Sprites/FiguranteMulher/ParadoDeFrente/parado_%d.png", 0);
+    carregar_sequencia(fig_mulher_costas, 4, "Sprites/FiguranteMulher/ParadoDeCostas/parado_tras_%d.png", 0);
+    carregar_sequencia(fig_mulher_dir,    2, "Sprites/FiguranteMulher/ParadoPraDireita/ParadoDir_%d.png", 0);
+    carregar_sequencia(fig_mulher_esq,    2, "Sprites/FiguranteMulher/ParadoPraEsquerda/ParadoEsq_%d.png", 0);
+
 
     if (jog_parado_frente[0] && jog_mil_parado_frente[0])
         printf("[OK] Animacoes do Protagonista (Normal e Militar) carregadas!\n");
@@ -294,6 +331,50 @@ void sprites_desenhar_mentor_animado(float x, float y, int direcao, bool andando
     float offset = (TAMANHO_SPRITE - tamanho_visual) / 2.0f;
     sprites_desenhar_tamanho(frame_atual, x + offset, y + offset, tamanho_visual, tamanho_visual, false, al_map_rgb(220, 180, 40));
 }
+
+void sprites_desenhar_figurante_animado(int tipo, float x, float y, int direcao)
+{
+    contador_anim_figurantes++;
+    int passo_anim = contador_anim_figurantes / 12; // Respiração/animação suave
+
+    ALLEGRO_BITMAP *frame_atual = NULL;
+
+    if (tipo == 0) // Idoso
+    {
+        if (direcao == DIR_DIREITA)       frame_atual = fig_idoso_dir[passo_anim % 4];
+        else if (direcao == DIR_ESQUERDA) frame_atual = fig_idoso_esq[passo_anim % 5];
+        else if (direcao == DIR_COSTAS)   frame_atual = fig_idoso_costas[passo_anim % 5];
+        else                              frame_atual = fig_idoso_frente[passo_anim % 5];
+
+        if (frame_atual == NULL) frame_atual = fig_idoso_frente;
+    }
+    else if (tipo == 1) // Jovem
+    {
+        if (direcao == DIR_DIREITA)       frame_atual = fig_jovem_dir[passo_anim % 2];
+        else if (direcao == DIR_ESQUERDA) frame_atual = fig_jovem_esq[passo_anim % 5];
+        else if (direcao == DIR_COSTAS)   frame_atual = fig_jovem_costas[passo_anim % 3];
+        else                              frame_atual = fig_jovem_frente[passo_anim % 3];
+
+        if (frame_atual == NULL) frame_atual = fig_jovem_frente;
+    }
+    else // Mulher
+    {
+        if (direcao == DIR_DIREITA)       frame_atual = fig_mulher_dir[passo_anim % 2];
+        else if (direcao == DIR_ESQUERDA) frame_atual = fig_mulher_esq[passo_anim % 2];
+        else if (direcao == DIR_COSTAS)   frame_atual = fig_mulher_costas[passo_anim % 4];
+        else                              frame_atual = fig_mulher_frente[passo_anim % 4];
+
+        if (frame_atual == NULL) frame_atual = fig_mulher_frente;
+    }
+
+    if (frame_atual == NULL) frame_atual = npc_fallback;
+
+    float tamanho_visual = 100.0f;
+    float offset = (TAMANHO_SPRITE - tamanho_visual) / 2.0f;
+    sprites_desenhar_tamanho(frame_atual, x + offset, y + offset, tamanho_visual, tamanho_visual, false, al_map_rgb(220, 180, 40));
+}
+
+
 void sprites_desenhar_chave(float x, float y)
 {
     float tamanho_chave = 50.0f;
@@ -353,4 +434,17 @@ void sprites_finalizar(void)
     destruir_sequencia(jog_mil_parado_tras, 5);
     destruir_sequencia(jog_mil_parado_dir, 2);
     destruir_sequencia(jog_mil_parado_esq, 2);
+    destruir_sequencia(fig_idoso_frente, 5);
+    destruir_sequencia(fig_idoso_costas, 5);
+    destruir_sequencia(fig_idoso_dir, 4);
+    destruir_sequencia(fig_idoso_esq, 5);
+    destruir_sequencia(fig_jovem_frente, 3);
+    destruir_sequencia(fig_jovem_costas, 3);
+    destruir_sequencia(fig_jovem_dir, 2);
+    destruir_sequencia(fig_jovem_esq, 5);
+    destruir_sequencia(fig_mulher_frente, 4);
+    destruir_sequencia(fig_mulher_costas, 4);
+    destruir_sequencia(fig_mulher_dir, 2);
+    destruir_sequencia(fig_mulher_esq, 2);
+
 }

@@ -518,18 +518,28 @@ int jogo()
     int doc_final_coluna = 35;
     bool documento_final_coletado = false;
 
-    Figurante figurantes[2];
+    Figurante figurantes[3];
+    // Figurante 0: Idoso
     figurantes[0].linha = 8;
     figurantes[0].coluna = 12;
     figurantes[0].x = figurantes[0].coluna * TAMANHO_PIXEL;
     figurantes[0].y = figurantes[0].linha * TAMANHO_PIXEL;
     mapa[figurantes[0].linha][figurantes[0].coluna] = 1;
 
+    // Figurante 1: Jovem
     figurantes[1].linha = 16;
     figurantes[1].coluna = 15;
     figurantes[1].x = figurantes[1].coluna * TAMANHO_PIXEL;
     figurantes[1].y = figurantes[1].linha * TAMANHO_PIXEL;
     mapa[figurantes[1].linha][figurantes[1].coluna] = 1;
+
+    // Figurante 2: Mulher
+    figurantes[2].linha = 11;
+    figurantes[2].coluna = 24;
+    figurantes[2].x = figurantes[2].coluna * TAMANHO_PIXEL;
+    figurantes[2].y = figurantes[2].linha * TAMANHO_PIXEL;
+    mapa[figurantes[2].linha][figurantes[2].coluna] = 1;
+
 
     strcpy(mentor.falas[0], "Olá, jovem! Que bom te ver por aqui nesta praça.");
     strcpy(mentor.falas[1], "Estive planejando uma máquina revolucionária ultimamente...");
@@ -1344,11 +1354,26 @@ int jogo()
 
             if (estado_missao != 3 && estado_missao != 8)
             {
-                for (int i = 0; i < 2; i++)
+                for (int i = 0; i < 3; i++)
                 {
-                    sprites_desenhar_npc(figurantes[i].x, figurantes[i].y);
+                    int fig_dir = DIR_FRENTE;
+                    float diff_fx = jogador_x_mundo - figurantes[i].x;
+                    float diff_fy = jogador_y_mundo - figurantes[i].y;
+                    float dist_f = sqrt(diff_fx * diff_fx + diff_fy * diff_fy);
+
+                    // Se você chegar perto, o figurante vira para te olhar!
+                    if (dist_f < 160.0f)
+                    {
+                        if (fabs(diff_fx) > fabs(diff_fy))
+                            fig_dir = (diff_fx < 0) ? DIR_ESQUERDA : DIR_DIREITA;
+                        else
+                            fig_dir = (diff_fy < 0) ? DIR_COSTAS : DIR_FRENTE;
+                    }
+
+                    sprites_desenhar_figurante_animado(i, figurantes[i].x, figurantes[i].y, fig_dir);
                 }
             }
+
 
             if (itens_visiveis && estado_missao != 3 && estado_missao != 8)
             {
