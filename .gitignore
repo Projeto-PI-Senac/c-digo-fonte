@@ -1,0 +1,28 @@
+# Compilações, Executáveis e Bibliotecas
+*.exe
+*.o
+*.obj
+*.dll
+*.lib
+*.a
+jogo
+
+# Pastas de Build e da Allegro local
+bin/
+obj/
+Debug/
+Release/
+x64/
+x86/
+allegro/
+
+# Configurações e arquivos temporários de IDE
+.vs/
+.vscode/
+*.suo
+*.user
+*.vcxproj.user
+
+# Arquivos do Sistema Operacional
+.DS_Store
+Thumbs.db
