@@ -27,6 +27,7 @@ void sprites_desenhar_figurante_animado(int tipo, float x, float y, int direcao)
 void sprites_desenhar_chave(float x, float y);
 void sprites_desenhar_jornal(float x, float y);
 void sprites_desenhar_documento(float x, float y);
+void sprites_desenhar_game_over(int largura_tela, int altura_tela);
 
 // Liberação da memória
 void sprites_finalizar(void);

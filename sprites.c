@@ -14,6 +14,7 @@ static ALLEGRO_BITMAP* npc_fallback = NULL;
 static ALLEGRO_BITMAP* chave = NULL;
 static ALLEGRO_BITMAP* jornal = NULL;
 static ALLEGRO_BITMAP* documento = NULL;
+static ALLEGRO_BITMAP *tela_gameover_img = NULL;
 
 #define MAX_FRAMES 10
 #define MAX_CAMINHO 256
@@ -105,6 +106,24 @@ static void destruir_sequencia(ALLEGRO_BITMAP** lista, int qtd)
     }
 }
 
+void sprites_desenhar_game_over(int largura_tela, int altura_tela)
+{
+    if (tela_gameover_img != NULL)
+    {
+        al_draw_scaled_bitmap(
+            tela_gameover_img, 0, 0,
+            al_get_bitmap_width(tela_gameover_img),
+            al_get_bitmap_height(tela_gameover_img),
+            0, 0, largura_tela, altura_tela, 0
+        );
+    }
+    else
+    {
+        al_clear_to_color(al_map_rgb(15, 5, 10));
+    }
+}
+
+
 void sprites_inicializar(void)
 {
     if (!al_is_image_addon_initialized()) {
@@ -128,6 +147,10 @@ void sprites_inicializar(void)
 
     documento = al_load_bitmap("Sprites/Peca2.png");
     if (!documento) documento = al_load_bitmap("Sprites/Peça2.png");
+
+    tela_gameover_img = al_load_bitmap("Sprites/TelaGameOver.png");
+    if (!tela_gameover_img) tela_gameover_img = al_load_bitmap("./Sprites/TelaGameOver.png");
+
 
     // Soldado Militar
     carregar_sequencia(guarda_andar_dir, 4, "Sprites/Soldado militar/AndandoPraDireita/AndandoDir_%d.png", 0);
@@ -406,6 +429,7 @@ void sprites_finalizar(void)
     if (chave) { al_destroy_bitmap(chave); chave = NULL; }
     if (jornal) { al_destroy_bitmap(jornal); jornal = NULL; }
     if (documento) { al_destroy_bitmap(documento); documento = NULL; }
+    if (tela_gameover_img) { al_destroy_bitmap(tela_gameover_img); tela_gameover_img = NULL; }
     destruir_sequencia(guarda_andar_dir, 4);
     destruir_sequencia(guarda_andar_esq, 4);
     destruir_sequencia(guarda_andar_frente, 5);
